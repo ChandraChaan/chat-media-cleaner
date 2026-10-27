@@ -379,5 +379,15 @@
   "aboutAndLicenses": "About and licenses",
   "legalese": "Open source under the MIT license.",
   "chooseFolderAgain": "Choose folder again",
-  "byTypeTitle": "By type"
+  "byTypeTitle": "By type",
+  "groupDuplicates": "Exact duplicates",
+  "groupDuplicatesDescription": "Extra copies of identical files. The oldest copy of each is kept and never listed here.",
+  "trashTooltip": "{count, plural, =0{Trash} =1{Trash, 1 file} other{Trash, {count} files}}",
+  "@trashTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import 'duplicate_finder.dart';
 import 'media_file.dart';
 import 'media_type.dart';
 
@@ -5,6 +6,10 @@ import 'media_type.dart';
 enum SmartGroup {
   /// The biggest files, largest first.
   largest,
+
+  /// Extra copies of identical files; the oldest copy of each is kept and
+  /// never listed.
+  duplicates,
 
   /// Received photos, GIFs and short videos older than the age rule: mostly
   /// forwards and memes that are no longer of interest.
@@ -63,6 +68,7 @@ final class MediaReport {
     required this.files,
     required this.byType,
     required this.groups,
+    this.duplicateSets = const [],
   });
 
   final List<MediaFile> files;
@@ -70,6 +76,9 @@ final class MediaReport {
   /// Every type with at least one file, each sorted largest first.
   final Map<MediaType, FileGroup> byType;
   final Map<SmartGroup, FileGroup> groups;
+
+  /// Identical files, limited to those still present.
+  final List<DuplicateSet> duplicateSets;
 
   int get totalBytes => files.fold(0, (sum, f) => sum + f.size);
   int get totalCount => files.length;
@@ -79,10 +88,14 @@ final class MediaReport {
 }
 
 abstract final class MediaAnalyzer {
+  /// [duplicates] come from [DuplicateFinder]; sets are re-checked against
+  /// [files], so files moved to the trash since drop out and a set always
+  /// keeps one copy.
   static MediaReport analyze(
     List<MediaFile> files, {
     required AnalysisRules rules,
     required DateTime now,
+    List<DuplicateSet> duplicates = const [],
   }) {
     final bySizeDesc = [...files]..sort(_largestFirst);
 
@@ -102,6 +115,10 @@ abstract final class MediaAnalyzer {
 
     final sent = bySizeDesc.where((f) => f.isSent).toList();
 
+    final present = {for (final f in files) f.key: f};
+    final sets = [for (final set in duplicates) ?set.within(present)];
+    final copies = [for (final set in sets) ...set.copies]..sort(_largestFirst);
+
     return MediaReport(
       files: List.unmodifiable(files),
       byType: {
@@ -110,9 +127,11 @@ abstract final class MediaAnalyzer {
       },
       groups: {
         SmartGroup.largest: FileGroup(largest),
+        SmartGroup.duplicates: FileGroup(copies),
         SmartGroup.oldForwards: FileGroup(old),
         SmartGroup.sentCopies: FileGroup(sent),
       },
+      duplicateSets: sets,
     );
   }
 

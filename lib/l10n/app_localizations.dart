@@ -801,6 +801,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'By type'**
   String get byTypeTitle;
+
+  /// No description provided for @groupDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact duplicates'**
+  String get groupDuplicates;
+
+  /// No description provided for @groupDuplicatesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra copies of identical files. The oldest copy of each is kept and never listed here.'**
+  String get groupDuplicatesDescription;
+
+  /// No description provided for @trashTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Trash} =1{Trash, 1 file} other{Trash, {count} files}}'**
+  String trashTooltip(int count);
 }
 
 class _AppLocalizationsDelegate

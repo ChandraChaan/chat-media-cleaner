@@ -208,7 +208,9 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('5.5 MB'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('In the trash: 60 MB'), 200);
       expect(find.text('In the trash: 60 MB'), findsOneWidget);
+      expect(find.byTooltip('Trash, 2 files'), findsOneWidget);
     });
 
     testWidgets('delete now frees the space and counts it', (tester) async {
@@ -284,6 +286,44 @@ void main() {
       expect(_tile('Rent agreement.pdf'), findsOneWidget);
       expect(find.text('Rent agreement.pdf'), findsOneWidget);
     });
+  });
+
+  testWidgets('duplicates: removing every listed copy keeps the oldest', (
+    tester,
+  ) async {
+    final app = TestApp();
+    for (final (i, month) in [3, 1, 7].indexed) {
+      app.storage.addFile(
+        'WhatsApp Images/IMG-${i + 1}.jpg',
+        content: 'good morning',
+        size: 2 * mb,
+        modified: DateTime.utc(2026, month),
+      );
+    }
+    app.storage.addFile('WhatsApp Images/unique.jpg', size: 2 * mb);
+    await app.pump(tester);
+    await _scan(tester);
+
+    expect(find.text('Exact duplicates'), findsOneWidget);
+    await _openGroup(tester, 'duplicates');
+    expect(find.textContaining('oldest copy of each is kept'), findsOneWidget);
+    expect(_tile('IMG-1.jpg'), findsOneWidget);
+    expect(_tile('IMG-3.jpg'), findsOneWidget);
+    expect(_tile('IMG-2.jpg'), findsNothing);
+    expect(_tile('unique.jpg'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('select-all')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('move-to-trash')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-move')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('keep-in-trash')));
+    await tester.pumpAndSettle();
+
+    expect(app.storage.exists('$waMediaId/WhatsApp Images/IMG-2.jpg'), isTrue);
+    expect(app.storage.trashedFiles(), hasLength(2));
+    expect(find.text('Nothing left here.'), findsOneWidget);
   });
 
   group('trash', () {

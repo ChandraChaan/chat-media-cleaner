@@ -35,14 +35,18 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             key: const Key('open-trash'),
-            tooltip: l10n.trashTitle,
+            tooltip: l10n.trashTooltip(trashCount),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const TrashScreen()),
             ),
-            icon: Badge.count(
-              count: trashCount,
-              isLabelVisible: trashCount > 0,
-              child: const Icon(Icons.delete_outline),
+            // The tooltip already says how many files; the badge would
+            // otherwise be read out instead of the button's name.
+            icon: ExcludeSemantics(
+              child: Badge.count(
+                count: trashCount,
+                isLabelVisible: trashCount > 0,
+                child: const Icon(Icons.delete_outline),
+              ),
             ),
           ),
           IconButton(

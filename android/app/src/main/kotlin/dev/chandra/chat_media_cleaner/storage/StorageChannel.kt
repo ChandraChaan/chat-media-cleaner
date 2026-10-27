@@ -67,6 +67,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                 result.success(null)
             }
             "listChildren" -> run(io, result) { listChildren(call.tree(), call.str("docId")) }
+            "hashFile" -> run(io, result) { hashFile(call.tree(), call.str("docId")) }
             "moveToTrash" -> run(io, result) {
                 moveToTrash(
                     call.tree(),
@@ -181,6 +182,10 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         }
         return rows
     }
+
+    private fun hashFile(tree: Uri, docId: String): String =
+        resolver.openInputStream(docUri(tree, docId))?.use { Hashing.sha256Hex(it) }
+            ?: throw FileNotFoundException(docId)
 
     private fun moveToTrash(
         tree: Uri,
