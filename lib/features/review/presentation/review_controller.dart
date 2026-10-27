@@ -38,7 +38,9 @@ final class GroupReview extends ReviewTarget {
   @override
   SortOrder get defaultOrder => switch (group) {
     SmartGroup.oldForwards => SortOrder.oldest,
-    SmartGroup.largest || SmartGroup.sentCopies => SortOrder.largest,
+    SmartGroup.largest ||
+    SmartGroup.duplicates ||
+    SmartGroup.sentCopies => SortOrder.largest,
   };
 }
 

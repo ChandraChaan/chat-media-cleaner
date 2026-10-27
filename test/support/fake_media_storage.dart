@@ -126,6 +126,27 @@ class FakeMediaStorage implements MediaStorage, MediaViewer, FolderAccess {
     ];
   }
 
+  /// Files whose hashing fails.
+  final failHashes = <String>{};
+
+  /// Number of hashFile calls, to check that only candidates are hashed.
+  int hashCalls = 0;
+
+  @override
+  Future<String> hashFile(String treeUri, String fileId) async {
+    _checkAccess(treeUri, fileId);
+    hashCalls++;
+    final node = _nodes[fileId];
+    if (node == null || node.isDir) {
+      throw StorageException(StorageError.notFound, fileId);
+    }
+    if (failHashes.contains(fileId)) {
+      throw const StorageException(StorageError.failed, 'read failed');
+    }
+    // Stands in for SHA-256: equal content gives an equal "hash".
+    return 'hash:${node.content}';
+  }
+
   @override
   Future<TrashedItem> moveToTrash(
     String treeUri, {

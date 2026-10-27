@@ -277,4 +277,22 @@ void _addMedia(FakeMediaStorage s) {
     );
   }
   add('WhatsApp Audio/AUD-20250630-WA0001.mp3', 7.4, DateTime.utc(2025, 6, 30));
+
+  // The same clip forwarded in several groups, and a few repeated memes.
+  for (final (i, day) in [3, 9, 14, 21].indexed) {
+    s.addFile(
+      'WhatsApp Video/VID-202605${'$day'.padLeft(2, '0')}-WA00${40 + i}.mp4',
+      size: 23400000,
+      modified: DateTime.utc(2026, 5, day),
+      content: 'forwarded clip',
+    );
+  }
+  for (var i = 0; i < 12; i++) {
+    s.addFile(
+      'WhatsApp Images/IMG-20260${(i % 6) + 1}15-WA01$i.jpg',
+      size: 180000 + (i % 3) * 1000,
+      modified: DateTime.utc(2026, (i % 6) + 1, 15),
+      content: 'meme ${i % 3}',
+    );
+  }
 }

@@ -379,5 +379,7 @@
   "aboutAndLicenses": "About and licenses",
   "legalese": "Open source under the MIT license.",
   "chooseFolderAgain": "Choose folder again",
-  "byTypeTitle": "By type"
+  "byTypeTitle": "By type",
+  "groupDuplicates": "Exact duplicates",
+  "groupDuplicatesDescription": "Extra copies of identical files. The oldest copy of each is kept and never listed here."
 }

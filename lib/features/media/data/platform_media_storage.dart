@@ -41,6 +41,10 @@ final class PlatformMediaStorage
   }
 
   @override
+  Future<String> hashFile(String treeUri, String fileId) async =>
+      (await _call<String>('hashFile', {'treeUri': treeUri, 'docId': fileId}))!;
+
+  @override
   Future<TrashedItem> moveToTrash(
     String treeUri, {
     required String rootId,

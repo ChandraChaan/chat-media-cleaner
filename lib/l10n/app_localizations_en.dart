@@ -579,4 +579,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get byTypeTitle => 'By type';
+
+  @override
+  String get groupDuplicates => 'Exact duplicates';
+
+  @override
+  String get groupDuplicatesDescription =>
+      'Extra copies of identical files. The oldest copy of each is kept and never listed here.';
 }

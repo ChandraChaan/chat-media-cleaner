@@ -61,6 +61,9 @@ abstract interface class MediaStorage {
   /// Files and folders directly inside [dirId].
   Future<List<StorageEntry>> listChildren(String treeUri, String dirId);
 
+  /// SHA-256 of the file's content, as lowercase hex.
+  Future<String> hashFile(String treeUri, String fileId);
+
   /// Moves a file into the app's trash folder below [rootId], in a new
   /// folder named [itemKey] so names never clash.
   Future<TrashedItem> moveToTrash(

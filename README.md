@@ -8,10 +8,10 @@
 
 **See which WhatsApp photos, videos and voice notes are filling your phone, and clear them safely.**
 
-Chat Media Cleaner scans the WhatsApp (and WhatsApp Business) media folder, shows what takes the most space, and groups the files you probably don't need: huge videos, old forwards and memes, copies of things you sent. You pick what goes. Deleted files wait in a trash for 7 days so you can change your mind. No internet permission, no account, no ads.
+Chat Media Cleaner scans the WhatsApp (and WhatsApp Business) media folder, shows what takes the most space, and groups the files you probably don't need: huge videos, the same meme saved five times, old forwards, copies of things you sent. You pick what goes. Deleted files wait in a trash for 7 days so you can change your mind. No internet permission, no account, no ads.
 
 <p align="center">
-  <img src="docs/screenshots/01_home.png" alt="Home screen: 1.5 GB of chat media split by type, with Largest files, Old forwards and memes, and Sent media copies groups" width="200">
+  <img src="docs/screenshots/01_home.png" alt="Home screen: chat media split by type, with Largest files, Exact duplicates, Old forwards and memes, and Sent media copies groups" width="200">
   <img src="docs/screenshots/02_review.png" alt="Review grid of old forwards with thumbnails, sizes and five files selected" width="200">
   <img src="docs/screenshots/03_confirm.png" alt="Confirmation before moving 100 files (1.4 GB) to the trash" width="200">
   <img src="docs/screenshots/04_trash.png" alt="Trash with days left before each file is deleted for good, and Restore" width="200">
@@ -32,7 +32,7 @@ Open the file on your phone and allow installing from your browser or file manag
 ## How to use it
 
 1. Open the app and tap **Choose WhatsApp folder**. Android's file picker opens at the right place; tap **Use this folder**, then **Allow**.
-2. Tap **Scan now**. You get the total, a breakdown by type (videos, images, voice notes, documents, stickers, GIFs, statuses) and the clean-up groups.
+2. Tap **Scan now**. The scan lists the folder, then compares files of the same size to find exact duplicates. You get the total, a breakdown by type (videos, images, voice notes, documents, stickers, GIFs, statuses) and the clean-up groups.
 3. Open a group, tap the files you want gone (touch and hold to preview), and tap **Move to trash**.
 4. Delete them right away to free the space, or leave them in the trash. Anything still there after 7 days (you can pick 1 to 30) is deleted for good the next time you open the app.
 
@@ -41,6 +41,7 @@ Open the file on your phone and allow installing from your browser or file manag
 | Group | What's in it |
 |---|---|
 | **Largest files** | The 100 biggest files of 1 MB or more, biggest first. |
+| **Exact duplicates** | Files with exactly the same content (same size, then the same SHA-256 hash), like a video forwarded to you in three groups. The oldest copy of each is kept and never listed, so even "Select all" leaves one. |
 | **Old forwards and memes** | Photos, GIFs and short videos (up to 16 MB) you *received* more than 6 months ago (3, 6, 12 or 24 in Settings). Voice notes, documents and things you sent are never in this group. |
 | **Sent media copies** | Files in WhatsApp's `Sent` folders: copies of media you sent, whose originals usually stay in your gallery. |
 | **By type** | Every file of one type, for example all statuses or all documents. |
@@ -82,10 +83,11 @@ Flutter app with a small Kotlin layer for folder access. Pull requests are welco
 
 | Layer | What it does |
 | --- | --- |
-| [`StorageChannel.kt`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/StorageChannel.kt) | Storage Access Framework on background threads: folder picker with a persisted grant, listing folders (`DocumentsContract` queries), thumbnails (provider thumbnail, video frame or sampled decode), moving files into and out of the trash (`moveDocument`, so no copying), opening a file in another app. |
+| [`StorageChannel.kt`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/StorageChannel.kt) | Storage Access Framework on background threads: folder picker with a persisted grant, listing folders (`DocumentsContract` queries), streaming SHA-256 of a file, thumbnails (provider thumbnail, video frame or sampled decode), moving files into and out of the trash (`moveDocument`, so no copying), opening a file in another app. |
 | [`MediaStorage`](lib/features/media/domain/media_storage.dart) | The Dart interface over that platform code; tests use an in-memory fake file tree. |
 | [`SourceLocator`](lib/features/media/domain/media_source.dart) | Knows the modern and legacy WhatsApp / WhatsApp Business paths, opens the picker in the right place and finds the `Media` folder inside whatever was picked. |
 | [`MediaScanner`](lib/features/media/domain/media_scanner.dart) | Walks the folder tree with progress and cancel, skipping the trash and `.nomedia` files. |
+| [`DuplicateFinder`](lib/features/media/domain/duplicate_finder.dart) | Groups files by size, hashes only those that share a size (SHA-256 in Kotlin, two at a time), groups by hash within each folder, keeps the oldest of each set. Sets are re-checked whenever files are trashed or restored, so one copy always stays. |
 | [`MediaClassifier`](lib/features/media/domain/media_type.dart) / [`MediaAnalyzer`](lib/features/media/domain/media_report.dart) | Type from the WhatsApp folder name (with a MIME fallback), totals by type, and the smart groups and age rule. |
 | [`TrashRepository`](lib/features/trash/domain/trash_repository.dart) | Trash bookkeeping: move, restore (with name clashes and missing folders), delete for good, expiry. The index is a JSON file in app storage. |
 | Flutter UI | Riverpod 3 controllers per screen; folder explainer, home, review grid, preview, trash and settings; light and dark themes. |

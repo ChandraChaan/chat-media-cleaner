@@ -35,6 +35,7 @@ extension MediaTypeLabels on MediaType {
 extension SmartGroupLabels on SmartGroup {
   String title(AppLocalizations l10n) => switch (this) {
     SmartGroup.largest => l10n.groupLargest,
+    SmartGroup.duplicates => l10n.groupDuplicates,
     SmartGroup.oldForwards => l10n.groupOldForwards,
     SmartGroup.sentCopies => l10n.groupSentCopies,
   };
@@ -42,6 +43,7 @@ extension SmartGroupLabels on SmartGroup {
   String description(AppLocalizations l10n, {required int oldAfterMonths}) =>
       switch (this) {
         SmartGroup.largest => l10n.groupLargestDescription,
+        SmartGroup.duplicates => l10n.groupDuplicatesDescription,
         SmartGroup.oldForwards => l10n.groupOldForwardsDescription(
           oldAfterMonths,
         ),
@@ -50,6 +52,7 @@ extension SmartGroupLabels on SmartGroup {
 
   IconData get icon => switch (this) {
     SmartGroup.largest => Icons.straighten,
+    SmartGroup.duplicates => Icons.content_copy,
     SmartGroup.oldForwards => Icons.history,
     SmartGroup.sentCopies => Icons.north_east,
   };

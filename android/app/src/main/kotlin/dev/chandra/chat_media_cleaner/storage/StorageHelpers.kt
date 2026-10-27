@@ -1,5 +1,8 @@
 package dev.chandra.chat_media_cleaner.storage
 
+import java.io.InputStream
+import java.security.MessageDigest
+
 /** The app's trash folder inside each chat `Media` folder. */
 object TrashFolder {
     /** Must match `MediaScanner.trashFolderName` in the Dart code. */
@@ -7,6 +10,34 @@ object TrashFolder {
 
     /** Keeps gallery apps from showing trashed photos and videos. */
     const val NO_MEDIA = ".nomedia"
+}
+
+/** Content hashes for finding exact duplicates. */
+object Hashing {
+    private const val BUFFER_SIZE = 64 * 1024
+    private val HEX = "0123456789abcdef".toCharArray()
+
+    /** SHA-256 of everything [input] yields, as lowercase hex. Does not close [input]. */
+    fun sha256Hex(input: InputStream): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+        return toHex(digest.digest())
+    }
+
+    fun toHex(bytes: ByteArray): String {
+        val chars = CharArray(bytes.size * 2)
+        for ((i, b) in bytes.withIndex()) {
+            val v = b.toInt() and 0xFF
+            chars[i * 2] = HEX[v ushr 4]
+            chars[i * 2 + 1] = HEX[v and 0x0F]
+        }
+        return String(chars)
+    }
 }
 
 /** File names for files put back from the trash. */
