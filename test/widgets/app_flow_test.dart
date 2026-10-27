@@ -210,6 +210,7 @@ void main() {
       expect(find.text('5.5 MB'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('In the trash: 60 MB'), 200);
       expect(find.text('In the trash: 60 MB'), findsOneWidget);
+      expect(find.byTooltip('Trash, 2 files'), findsOneWidget);
     });
 
     testWidgets('delete now frees the space and counts it', (tester) async {

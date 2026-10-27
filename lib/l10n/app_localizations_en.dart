@@ -586,4 +586,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get groupDuplicatesDescription =>
       'Extra copies of identical files. The oldest copy of each is kept and never listed here.';
+
+  @override
+  String trashTooltip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Trash, $count files',
+      one: 'Trash, 1 file',
+      zero: 'Trash',
+    );
+    return '$_temp0';
+  }
 }

@@ -63,7 +63,7 @@ The app has **no storage permission and no `MANAGE_EXTERNAL_STORAGE`** in its ma
 ## Safety
 
 - **Nothing is deleted unless you select it** and confirm. Groups are suggestions; nothing is pre-selected.
-- **Trash first.** "Move to trash" moves files into a hidden `.media-cleaner-trash` folder inside the media folder you chose, with a `.nomedia` file so galleries ignore it. Moving is instant and needs no extra space. **Restore** puts each file back in its original folder under its original name (or a numbered name if that name was taken meanwhile).
+- **Trash first.** "Move to trash" moves files into a hidden `.media-cleaner-trash` folder inside the media folder you chose, with a `.nomedia` file so galleries ignore it. Moving is instant and needs no extra space. **Restore** puts each file back in its original folder under its original name and date (or a numbered name if that name was taken meanwhile).
 - **Space is freed when the trash is emptied:** right after moving (if you choose *Delete now*), from the trash screen, or automatically once the restore window (7 days by default) has passed. The automatic clean-up runs when you open the app.
 - Deleting a file here removes it from your phone. WhatsApp will show those messages without their media, exactly as if you'd deleted the files in a file manager.
 
