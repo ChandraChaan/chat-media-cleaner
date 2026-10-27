@@ -1,0 +1,5 @@
+tags:
+  # Renders the app icon and the README screenshots. Skipped in normal runs:
+  #   flutter test --run-skipped --tags tools --update-goldens test/tools
+  tools:
+    skip: "Image generator; run explicitly with --run-skipped --tags tools"

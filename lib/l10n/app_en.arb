@@ -1,0 +1,383 @@
+{
+  "@@locale": "en",
+  "appTitle": "Chat Media Cleaner",
+  "appWhatsApp": "WhatsApp",
+  "appWhatsAppBusiness": "WhatsApp Business",
+  "appOtherFolder": "Chat media folder",
+  "accessTitle": "Choose your chat media folder",
+  "accessBody": "Android keeps WhatsApp photos, videos and voice notes in a folder that other apps can only open if you choose it. Choose it once, and Chat Media Cleaner can show you what's taking up space.",
+  "accessStep1": "Tap Choose WhatsApp folder below.",
+  "accessStep2": "Android's file picker opens at Android › media › com.whatsapp › WhatsApp › Media.",
+  "accessStep3": "Tap Use this folder, then Allow.",
+  "promiseOnlyFolder": "Only the folder you choose. Nothing else on your phone.",
+  "promiseOffline": "No internet permission: nothing ever leaves your phone.",
+  "promiseReview": "Nothing is deleted until you select files and confirm.",
+  "promiseTrash": "Deleted files wait in the app's trash first, so you can restore them.",
+  "chooseWhatsAppFolder": "Choose WhatsApp folder",
+  "chooseBusinessFolder": "Choose WhatsApp Business folder",
+  "accessLegacyHint": "On Android 10 or older, the folder is WhatsApp › Media at the top of your phone's storage.",
+  "notAffiliatedTitle": "Not affiliated",
+  "notAffiliated": "Chat Media Cleaner is an independent app. It is not made by, affiliated with or endorsed by WhatsApp or Meta.",
+  "addFolderTitle": "Add a folder",
+  "addFolder": "Add folder",
+  "folderAdded": "Added {names}.",
+  "@folderAdded": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "folderNotChatMedia": "That folder doesn't contain WhatsApp media. Choose the Media folder inside WhatsApp.",
+  "folderPickFailed": "Couldn't open the folder picker. Please try again.",
+  "trashTitle": "Trash",
+  "settingsTitle": "Settings",
+  "scanPromptTitle": "Find what's taking up space",
+  "scanPromptBody": "Scanning reads file names, sizes and dates. Nothing is opened, changed or uploaded.",
+  "scanNow": "Scan now",
+  "rescan": "Scan again",
+  "scanListing": "Looking through your media…",
+  "scanHashing": "Comparing files… {done} of {total}",
+  "@scanHashing": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "scanFound": "{count, plural, =1{1 file} other{{formattedCount} files}} · {size} so far",
+  "@scanFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formattedCount": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "scanNoAccess": "Can't open the folder any more. Access may have been removed in system settings, or WhatsApp moved its files. Choose the folder again.",
+  "scanFailed": "The scan didn't finish. Please try again.",
+  "scanPartial": "Some folders couldn't be read and are not included.",
+  "actionCancel": "Cancel",
+  "actionRetry": "Try again",
+  "errorGeneric": "Something went wrong. Please try again.",
+  "totalFiles": "in {count, plural, =1{1 file} other{{formatted} files}}",
+  "@totalFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "fileCount": "{count, plural, =1{1 file} other{{formatted} files}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanUpTitle": "Clean up",
+  "groupLargest": "Largest files",
+  "groupLargestDescription": "The biggest files, 1 MB and up.",
+  "groupOldForwards": "Old forwards and memes",
+  "groupOldForwardsDescription": "Received photos, GIFs and short videos older than {months, plural, =1{1 month} other{{months} months}}.",
+  "@groupOldForwardsDescription": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "groupSentCopies": "Sent media copies",
+  "groupSentCopiesDescription": "Copies of media you sent. The originals usually stay in your gallery.",
+  "groupEmpty": "Nothing here",
+  "typeVideos": "Videos",
+  "typeImages": "Images",
+  "typeVoiceNotes": "Voice notes",
+  "typeAudio": "Audio",
+  "typeDocuments": "Documents",
+  "typeStickers": "Stickers",
+  "typeGifs": "GIFs",
+  "typeStatuses": "Statuses",
+  "typeOther": "Other",
+  "reviewHint": "Tap to select. Touch and hold to preview.",
+  "reviewEmpty": "Nothing left here.",
+  "previewHint": "preview",
+  "selectAll": "Select all",
+  "clearSelection": "Clear selection",
+  "sortTooltip": "Sort",
+  "sortLargest": "Largest first",
+  "sortOldest": "Oldest first",
+  "sortNewest": "Newest first",
+  "selectedSummary": "{count, plural, =1{1 selected} other{{formatted} selected}} · {size}",
+  "@selectedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrash": "Move to trash",
+  "moveConfirmTitle": "Move {count, plural, =1{1 file} other{{formatted} files}} to the trash?",
+  "@moveConfirmTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "moveConfirmBody": "{size} goes to the app's trash. You can restore anything from there for {days, plural, =1{1 day} other{{days} days}}. The space is freed when the trash is emptied.",
+  "@moveConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "movingProgress": "Moving to the trash… {done} of {total}",
+  "@movingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "moveFailed": "{count, plural, =1{The file couldn't be moved.} other{The files couldn't be moved.}} Try scanning again.",
+  "@moveFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "movedTitle": "Moved {count, plural, =1{1 file} other{{formatted} files}} ({size}) to the trash",
+  "@movedTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "movedBody": "Delete them now to free the space, or keep them in the trash for {days, plural, =1{1 day} other{{days} days}} in case you change your mind.",
+  "@movedBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "someNotMoved": "{count, plural, =1{1 file couldn't be moved and was left where it was.} other{{count} files couldn't be moved and were left where they were.}}",
+  "@someNotMoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keepInTrash": "Keep for {days, plural, =1{1 day} other{{days} days}}",
+  "@keepInTrash": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteNow": "Delete now",
+  "freed": "Freed {size}",
+  "@freed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "freedSoFar": "Freed so far: {size}",
+  "@freedSoFar": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "detailFolder": "Folder",
+  "detailSize": "Size",
+  "detailDate": "Date",
+  "detailType": "Type",
+  "openWith": "Open with…",
+  "select": "Select",
+  "selected": "Selected",
+  "noAppToOpen": "No app on this phone can open this file.",
+  "emptyTrash": "Empty trash",
+  "trashEmpty": "The trash is empty",
+  "trashInfo": "Files here are deleted for good after {days, plural, =1{1 day} other{{days} days}}. Restore puts them back where they were.",
+  "@trashInfo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashCardTitle": "In the trash: {size}",
+  "@trashCardTitle": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCardBody": "{count, plural, =1{1 file} other{{formatted} files}}, deleted for good after {days, plural, =1{1 day} other{{days} days}}",
+  "@trashCardBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "deletedForGoodIn": "{days, plural, =0{Deleted for good today} =1{Deleted for good in 1 day} other{Deleted for good in {days} days}}",
+  "@deletedForGoodIn": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteForever": "Delete for good",
+  "deleteConfirmTitle": "Delete {count, plural, =1{1 file} other{{formatted} files}} for good?",
+  "@deleteConfirmTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConfirmBody": "This frees {size}. You can't undo this.",
+  "@deleteConfirmBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFailed": "{count, plural, =1{1 file couldn't be deleted.} other{{count} files couldn't be deleted.}}",
+  "@deleteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreCount": "Restore ({count})",
+  "@restoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restored": "{count, plural, =1{Restored 1 file.} other{Restored {count} files.}}",
+  "@restored": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFolderGone": "{count, plural, =1{1 file stayed in the trash because its folder no longer exists.} other{{count} files stayed in the trash because their folder no longer exists.}}",
+  "@restoreFolderGone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFailed": "{count, plural, =1{1 file couldn't be restored.} other{{count} files couldn't be restored.}}",
+  "@restoreFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsTrash": "Trash",
+  "trashDaysSetting": "Keep deleted files for",
+  "settingsGroups": "Smart groups",
+  "oldMonthsSetting": "Old means older than",
+  "days": "{count, plural, =1{1 day} other{{count} days}}",
+  "@days": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "months": "{count, plural, =1{1 month} other{{count} months}}",
+  "@months": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsFolders": "Folders",
+  "removeAccess": "Remove access",
+  "removeAccessTitle": "Remove access to {app}?",
+  "@removeAccessTitle": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "removeAccessBody": "Files from this folder that are in the trash are deleted for good first. Nothing else is changed.",
+  "settingsAbout": "About",
+  "privacyTitle": "Privacy",
+  "privacyBody": "No internet permission, no analytics, no ads. Everything happens on your phone.",
+  "aboutAndLicenses": "About and licenses",
+  "legalese": "Open source under the MIT license.",
+  "chooseFolderAgain": "Choose folder again",
+  "byTypeTitle": "By type"
+}
