@@ -11,8 +11,10 @@ import 'package:chat_media_cleaner/features/trash/domain/trash_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import '../support/fake_media_storage.dart';
+import '../support/fake_video_platform.dart';
 import '../support/test_app.dart';
 
 /// Renders the README screenshots into docs/screenshots/ with real fonts and
@@ -76,6 +78,49 @@ void main() {
     await app.pump(tester);
     await _shot('05_access');
   });
+
+  testWidgets('06 files', (tester) async {
+    final app = _app();
+    await app.pump(tester);
+    await tester.tap(find.byKey(const Key('scan')));
+    await tester.pumpAndSettle();
+    await _openFolder(tester, 'WhatsApp Images');
+    await _settleImages(tester);
+    await _shot('06_files');
+  });
+
+  testWidgets('07 player', (tester) async {
+    VideoPlayerPlatform.instance = FakeVideoPlatform()
+      ..duration = const Duration(minutes: 3, seconds: 42)
+      ..position = const Duration(minutes: 1, seconds: 8)
+      ..size = const Size(1080, 1920)
+      ..view = Image.memory(_photos[4], fit: BoxFit.cover);
+    final app = _app();
+    await app.pump(tester);
+    await _openFolder(tester, 'WhatsApp Video');
+    await tester.tap(find.text('VID-20260420-WA0013.mp4'));
+    await tester.pumpAndSettle();
+    // Let the position reach the screen, then pause on a brightness swipe.
+    await tester.pump(const Duration(seconds: 1));
+    final gesture = await tester.startGesture(const Offset(90, 520));
+    for (final step in [-30.0, -20.0, -40.0]) {
+      await gesture.moveBy(Offset(0, step));
+      await tester.pump();
+    }
+    await _settleImages(tester);
+    await _shot('07_player');
+    await gesture.up();
+    await tester.pump(const Duration(seconds: 1));
+  });
+}
+
+Future<void> _openFolder(WidgetTester tester, String folder) async {
+  await tester.tap(find.byKey(const Key('tab-files')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('WhatsApp'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(folder));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _shot(String name) => expectLater(
