@@ -25,10 +25,21 @@ const wabSource = MediaSource(
   app: ChatApp.whatsappBusiness,
 );
 
+/// The smallest valid PNG: one transparent pixel.
+final onePixelPng = Uint8List.fromList(const [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+  0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x62, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]);
+
 /// An in-memory shared storage that behaves like Android's external storage
 /// documents provider: document ids are `primary:<path>`, folders are
 /// created on demand, and access is limited to granted trees.
-class FakeMediaStorage implements MediaStorage, MediaViewer, FolderAccess {
+class FakeMediaStorage
+    implements MediaStorage, MediaViewer, FolderAccess, ScreenControl {
   FakeMediaStorage({this.sdk = 34});
 
   int sdk;
@@ -216,10 +227,144 @@ class FakeMediaStorage implements MediaStorage, MediaViewer, FolderAccess {
     String treeUri,
     String fileId, {
     int maxBytes = 30 * 1024 * 1024,
+    bool truncate = false,
   }) async {
     final node = _nodes[fileId];
     if (node == null) throw StorageException(StorageError.notFound, fileId);
-    return Uint8List.fromList(utf8.encode(node.content));
+    final bytes = Uint8List.fromList(utf8.encode(node.content));
+    if (bytes.length <= maxBytes) return bytes;
+    if (!truncate) throw StorageException(StorageError.tooLarge, fileId);
+    return Uint8List.sublistView(bytes, 0, maxBytes);
+  }
+
+  /// Files whose rename fails for a reason other than a name clash.
+  final failRenames = <String>{};
+
+  @override
+  Future<String> rename(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required String newName,
+  }) async {
+    _checkAccess(treeUri, fileId);
+    if (!_nodes.containsKey(fileId)) {
+      throw StorageException(StorageError.notFound, fileId);
+    }
+    if (failRenames.contains(fileId)) {
+      throw const StorageException(StorageError.failed, 'rename failed');
+    }
+    final newId = '$parentId/$newName';
+    if (_nodes.containsKey(newId)) {
+      throw StorageException(StorageError.nameTaken, newName);
+    }
+    _nodes[newId] = _nodes.remove(fileId)!;
+    return newId;
+  }
+
+  @override
+  Future<String> contentUri(String treeUri, String fileId) async =>
+      'content://fake/${Uri.encodeComponent(fileId)}';
+
+  /// What [mediaInfo] reports, by file id.
+  final infos = <String, MediaInfo>{};
+
+  @override
+  Future<MediaInfo> mediaInfo(String treeUri, String fileId) async =>
+      infos[fileId] ?? MediaInfo.none;
+
+  /// Page counts of PDFs, by file id. A PDF that is not listed is damaged.
+  final pdfPages = <String, int>{};
+
+  /// PDFs that need a password.
+  final lockedPdfs = <String>{};
+
+  /// Pages drawn so far, as `fileId#index`.
+  final drawnPdfPages = <String>[];
+  int pdfCloses = 0;
+
+  @override
+  Future<int> pdfPageCount(String treeUri, String fileId) async {
+    if (lockedPdfs.contains(fileId)) {
+      throw StorageException(StorageError.locked, fileId);
+    }
+    final pages = pdfPages[fileId];
+    if (pages == null) throw StorageException(StorageError.unreadable, fileId);
+    return pages;
+  }
+
+  @override
+  Future<PdfPageImage> pdfPage(
+    String treeUri,
+    String fileId,
+    int index, {
+    required int width,
+  }) async {
+    drawnPdfPages.add('$fileId#$index');
+    return PdfPageImage(bytes: onePixelPng, width: 595, height: 842);
+  }
+
+  @override
+  Future<void> closePdf() async => pdfCloses++;
+
+  /// Every [keepScreenOn] call, in order.
+  final screenOn = <bool>[];
+
+  @override
+  Future<void> keepScreenOn({required bool on}) async => screenOn.add(on);
+
+  double? screenBrightness;
+  int mediaVolume = 5;
+  int maxVolume = 15;
+
+  @override
+  Future<double?> brightness() async => screenBrightness;
+
+  @override
+  Future<void> setBrightness(double? value) async => screenBrightness = value;
+
+  @override
+  Future<({int current, int max})> volume() async =>
+      (current: mediaVolume, max: maxVolume);
+
+  @override
+  Future<void> setVolume(int value) async => mediaVolume = value;
+
+  /// Videos no frame can be taken from.
+  final failFrames = <String>{};
+
+  @override
+  Future<String> saveVideoFrame(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required Duration position,
+    required String name,
+  }) async {
+    _checkAccess(treeUri, fileId);
+    if (failFrames.contains(fileId)) {
+      throw StorageException(StorageError.unreadable, fileId);
+    }
+    final taken = {for (final id in _childrenOf(parentId)) _nameOf(id)};
+    final free = _firstFree(name, taken);
+    _nodes['$parentId/$free'] = _Node(
+      isDir: false,
+      size: 1000,
+      mime: 'image/jpeg',
+      content: 'frame of $fileId at ${position.inSeconds}s',
+    );
+    return free;
+  }
+
+  /// Every [share] call: the file ids and the MIME type.
+  final shared = <({List<String> ids, String? mimeType})>[];
+
+  @override
+  Future<void> share(
+    List<({String treeUri, String fileId})> files, {
+    String? mimeType,
+  }) async {
+    shared.add((ids: [for (final f in files) f.fileId], mimeType: mimeType));
   }
 
   @override
@@ -311,6 +456,8 @@ class FakeMediaStorage implements MediaStorage, MediaViewer, FolderAccess {
     if (lower.endsWith('.opus')) return 'audio/ogg';
     if (lower.endsWith('.mp3')) return 'audio/mpeg';
     if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.txt')) return 'text/plain';
+    if (lower.endsWith('.png')) return 'image/png';
     return null;
   }
 }

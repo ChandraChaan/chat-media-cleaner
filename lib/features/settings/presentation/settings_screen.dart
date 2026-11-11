@@ -11,7 +11,7 @@ import '../domain/app_settings.dart';
 import 'settings_controller.dart';
 
 /// App version shown in About; keep in step with pubspec.yaml.
-const appVersion = '1.0.0';
+const appVersion = '1.1.0';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -55,7 +55,7 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.folder_outlined),
-                title: Text(source.app.label(l10n)),
+                title: Text(source.label(l10n)),
                 subtitle: Text(SourceLocator.pathOf(source.rootId)),
                 trailing: IconButton(
                   tooltip: l10n.removeAccess,
@@ -112,7 +112,7 @@ class SettingsScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.removeAccessTitle(source.app.label(l10n))),
+        title: Text(l10n.removeAccessTitle(source.label(l10n))),
         content: Text(l10n.removeAccessBody),
         actions: [
           TextButton(

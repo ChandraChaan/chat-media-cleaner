@@ -15,7 +15,8 @@ enum MediaType {
 ///
 /// WhatsApp keeps each kind of media in its own folder, for example
 /// `WhatsApp Images`, `WhatsApp Video` or `WhatsApp Voice Notes`.
-/// WhatsApp Business uses the same names with `WhatsApp Business` in front.
+/// WhatsApp Business uses the same names with `WhatsApp Business` in front,
+/// and Telegram with `Telegram`.
 /// Files you sent are kept in a `Sent` sub-folder.
 abstract final class MediaClassifier {
   static const _folderTypes = <String, MediaType>{
@@ -31,7 +32,7 @@ abstract final class MediaClassifier {
     '.statuses': MediaType.status,
   };
 
-  static const _prefixes = ['whatsapp business ', 'whatsapp '];
+  static const _prefixes = ['whatsapp business ', 'whatsapp ', 'telegram '];
 
   /// The type of the file at [relativePath] (segments separated by `/`,
   /// relative to the `Media` folder). Falls back to [mimeType] for files

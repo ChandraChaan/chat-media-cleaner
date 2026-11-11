@@ -10,6 +10,7 @@ import '../support/fake_media_storage.dart';
 import '../support/test_app.dart';
 
 const _bigVideo = '$waMediaId/WhatsApp Video/VID-20250101-WA0001.mp4';
+const _sentImage = '$waMediaId/WhatsApp Images/Sent/IMG-20260110-WA0010.jpg';
 const _newVideo = '$waMediaId/WhatsApp Video/VID-20260901-WA0007.mp4';
 
 Future<void> _scan(WidgetTester tester) async {
@@ -243,7 +244,7 @@ void main() {
       expect(find.text('Freed so far: 48 MB'), findsOneWidget);
     });
 
-    testWidgets('long press opens the preview, which can select', (
+    testWidgets('long press opens the file, which can be selected there', (
       tester,
     ) async {
       final app = TestApp();
@@ -252,22 +253,33 @@ void main() {
       await _scan(tester);
       await _openGroup(tester, 'largest');
 
-      await tester.longPress(_tile('VID-20250101-WA0001.mp4'));
+      await tester.longPress(_tile('IMG-20260110-WA0010.jpg'));
       await tester.pumpAndSettle();
-      expect(find.text('WhatsApp Video'), findsOneWidget);
-      expect(find.text('48 MB'), findsOneWidget);
+      expect(find.byKey(const Key('viewer-title')), findsOneWidget);
+      expect(find.text('3 of 4'), findsOneWidget);
 
+      await tester.tap(find.byKey(const Key('viewer-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Details'));
+      await tester.pumpAndSettle();
+      expect(find.text('WhatsApp › WhatsApp Images › Sent'), findsOneWidget);
+      expect(find.text('3 MB'), findsOneWidget);
+      await tester.tapAt(const Offset(200, 60));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('viewer-more')));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Open with…'));
       await tester.pump();
-      expect(app.storage.opened, [_bigVideo]);
+      expect(app.storage.opened, [_sentImage]);
 
       await tester.tap(find.byKey(const Key('preview-select')));
       await tester.pump();
-      expect(find.text('Selected'), findsOneWidget);
+      expect(find.byTooltip('Selected'), findsOneWidget);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(find.text('1 selected · 48 MB'), findsOneWidget);
+      expect(find.text('1 selected · 3 MB'), findsOneWidget);
     });
 
     testWidgets('lists files of one type from the summary', (tester) async {

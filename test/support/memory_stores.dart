@@ -1,6 +1,7 @@
 import 'package:chat_media_cleaner/features/settings/domain/app_settings.dart';
 import 'package:chat_media_cleaner/features/trash/domain/trash_entry.dart';
 import 'package:chat_media_cleaner/features/trash/domain/trash_repository.dart';
+import 'package:chat_media_cleaner/features/viewer/domain/playback_positions.dart';
 
 final class MemoryTrashIndexStore implements TrashIndexStore {
   MemoryTrashIndexStore([List<TrashEntry> initial = const []])
@@ -31,4 +32,18 @@ final class MemorySettingsStore implements SettingsStore {
 
   @override
   Future<void> save(AppSettings settings) async => this.settings = settings;
+}
+
+final class MemoryPlaybackPositionStore implements PlaybackPositionStore {
+  MemoryPlaybackPositionStore([Map<String, int> initial = const {}])
+    : positions = {...initial};
+
+  Map<String, int> positions;
+
+  @override
+  Future<Map<String, int>> load() async => {...positions};
+
+  @override
+  Future<void> save(Map<String, int> positions) async =>
+      this.positions = {...positions};
 }

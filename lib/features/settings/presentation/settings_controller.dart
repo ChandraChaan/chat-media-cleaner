@@ -51,13 +51,16 @@ final class SettingsController extends AsyncNotifier<AppSettings> {
   }
 
   /// Opens the system folder picker for [app] and adds what was picked.
+  /// With [ChatApp.other] the picker opens where the user last was, and
+  /// any folder is accepted.
   Future<AddFolderResult> addFolder(ChatApp app) async {
+    final any = app == ChatApp.other;
     final access = ref.read(folderAccessProvider);
     final PickedFolder? picked;
     try {
       final sdk = await access.sdkInt();
       picked = await access.pickFolder(
-        initialDocId: SourceLocator.initialDocId(app, sdk),
+        initialDocId: any ? null : SourceLocator.initialDocId(app, sdk),
       );
     } on StorageException {
       return const FolderPickFailed();
@@ -69,6 +72,7 @@ final class SettingsController extends AsyncNotifier<AppSettings> {
       found = await SourceLocator.resolve(
         ref.read(mediaStorageProvider),
         picked,
+        acceptAny: any,
       );
     } on NotAChatMediaFolder {
       await _releaseIfUnused(picked.treeUri, await future);

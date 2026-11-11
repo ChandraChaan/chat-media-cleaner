@@ -25,3 +25,19 @@ String formatCount(int count, [String? locale]) =>
 /// A date in the user's locale and time zone, for example `3 Mar 2024`.
 String formatDate(DateTime time, [String? locale]) =>
     DateFormat.yMMMd(locale).format(time.toLocal());
+
+/// A date and time in the user's locale and time zone, for example
+/// `3 Mar 2024, 14:05`.
+String formatDateTime(DateTime time, [String? locale]) =>
+    DateFormat.yMMMd(locale).add_Hm().format(time.toLocal());
+
+/// A length of time as a player shows it: `0:07`, `3:25` or `1:02:09`.
+String formatDuration(Duration duration) {
+  final total = duration.isNegative ? 0 : duration.inSeconds;
+  final hours = total ~/ 3600;
+  final minutes = (total % 3600) ~/ 60;
+  final seconds = (total % 60).toString().padLeft(2, '0');
+  return hours > 0
+      ? '$hours:${minutes.toString().padLeft(2, '0')}:$seconds'
+      : '$minutes:$seconds';
+}

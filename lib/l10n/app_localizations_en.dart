@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get promiseOnlyFolder =>
-      'Only the folder you choose. Nothing else on your phone.';
+      'Only the folders you choose. Nothing else on your phone.';
 
   @override
   String get promiseOffline =>
@@ -83,7 +83,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get folderNotChatMedia =>
-      'That folder doesn\'t contain WhatsApp media. Choose the Media folder inside WhatsApp.';
+      'That folder doesn\'t contain WhatsApp media. Choose the Media folder inside WhatsApp, or use Choose another folder.';
 
   @override
   String get folderPickFailed =>
@@ -230,7 +230,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get typeOther => 'Other';
 
   @override
-  String get reviewHint => 'Tap to select. Touch and hold to preview.';
+  String get reviewHint => 'Tap to select. Touch and hold to open.';
 
   @override
   String get reviewEmpty => 'Nothing left here.';
@@ -597,5 +597,325 @@ class AppLocalizationsEn extends AppLocalizations {
       zero: 'Trash',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get tabClean => 'Clean up';
+
+  @override
+  String get tabFiles => 'Files';
+
+  @override
+  String get filesTitle => 'Files';
+
+  @override
+  String get filesIntro =>
+      'Browse the folders you chose, open anything right here, and share, rename or delete files.';
+
+  @override
+  String get chooseOtherFolder => 'Choose another folder';
+
+  @override
+  String get accessOtherHint =>
+      'Other folders work too, for example Telegram, Download or Camera: tap Choose another folder and pick one.';
+
+  @override
+  String folderStats(int count, String formatted, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted files',
+      one: '1 file',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String get folderEmpty => 'This folder is empty';
+
+  @override
+  String get folderLoadFailed =>
+      'Couldn\'t open this folder. It may have been moved or deleted.';
+
+  @override
+  String get searchHint => 'Search in this folder';
+
+  @override
+  String get searchTooltip => 'Search';
+
+  @override
+  String get searchClose => 'Close search';
+
+  @override
+  String searchNoResults(String query) {
+    return 'Nothing here matches \"$query\".';
+  }
+
+  @override
+  String get viewAsGrid => 'Show as grid';
+
+  @override
+  String get viewAsList => 'Show as list';
+
+  @override
+  String get sortName => 'Name';
+
+  @override
+  String get sortSmallest => 'Smallest first';
+
+  @override
+  String selectedCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cancelSelection => 'Cancel selection';
+
+  @override
+  String fileMenuTooltip(String name) {
+    return 'More actions for $name';
+  }
+
+  @override
+  String get actionOpen => 'Open';
+
+  @override
+  String get actionShare => 'Share';
+
+  @override
+  String get actionRename => 'Rename';
+
+  @override
+  String get actionDetails => 'Details';
+
+  @override
+  String get actionMore => 'More';
+
+  @override
+  String get actionSave => 'Save';
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
+  String shareTooMany(int max) {
+    return 'Share up to $max files at a time.';
+  }
+
+  @override
+  String get renameTitle => 'Rename file';
+
+  @override
+  String get renameLabel => 'File name';
+
+  @override
+  String get renameWarning =>
+      'A chat app may no longer show a file after it is renamed.';
+
+  @override
+  String get renameEmpty => 'Type a name.';
+
+  @override
+  String get renameBadCharacter => 'A name can\'t contain / \\ : * ? \" < > |';
+
+  @override
+  String get renameReserved => 'That name can\'t be used.';
+
+  @override
+  String get renameTooLong => 'That name is too long.';
+
+  @override
+  String get renameTaken => 'This folder already has a file with that name.';
+
+  @override
+  String get renameFailed => 'Couldn\'t rename the file.';
+
+  @override
+  String renamed(String name) {
+    return 'Renamed to $name.';
+  }
+
+  @override
+  String get detailName => 'Name';
+
+  @override
+  String get detailDimensions => 'Dimensions';
+
+  @override
+  String get detailDuration => 'Length';
+
+  @override
+  String dimensions(int width, int height) {
+    return '$width × $height';
+  }
+
+  @override
+  String viewerPosition(int index, int total) {
+    return '$index of $total';
+  }
+
+  @override
+  String get viewerNoPreview => 'This kind of file can\'t be shown here.';
+
+  @override
+  String get viewerCantPlay => 'This file can\'t be played here.';
+
+  @override
+  String get viewerCantShow =>
+      'This file couldn\'t be opened. It may be damaged.';
+
+  @override
+  String get viewerPdfLocked =>
+      'This PDF needs a password. Open it with another app.';
+
+  @override
+  String get viewerTextTruncated => 'Only the beginning of this file is shown.';
+
+  @override
+  String pdfPage(int page, int total) {
+    return 'Page $page of $total';
+  }
+
+  @override
+  String get playerPlay => 'Play';
+
+  @override
+  String get playerPause => 'Pause';
+
+  @override
+  String get playerReplay => 'Play again';
+
+  @override
+  String get playerMute => 'Mute';
+
+  @override
+  String get playerUnmute => 'Unmute';
+
+  @override
+  String get playerSpeed => 'Playback speed';
+
+  @override
+  String get playerSpeedNormal => 'Normal';
+
+  @override
+  String get playerLoopOn => 'Repeat is on';
+
+  @override
+  String get playerLoopOff => 'Repeat is off';
+
+  @override
+  String get playerFullscreen => 'Full screen';
+
+  @override
+  String get playerExitFullscreen => 'Exit full screen';
+
+  @override
+  String playerBack(int seconds) {
+    return 'Back $seconds seconds';
+  }
+
+  @override
+  String playerForward(int seconds) {
+    return 'Forward $seconds seconds';
+  }
+
+  @override
+  String playerSkipped(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get playerPosition => 'Position';
+
+  @override
+  String get openHint => 'open';
+
+  @override
+  String get browseHint => 'Tap to open. Touch and hold to select.';
+
+  @override
+  String get viewerToggleControls => 'Show or hide the controls';
+
+  @override
+  String get playerLock => 'Lock the controls';
+
+  @override
+  String get playerUnlock => 'Unlock';
+
+  @override
+  String get playerLocked => 'Locked';
+
+  @override
+  String get playerFitFit => 'Fit to screen';
+
+  @override
+  String get playerFitCrop => 'Crop to fill';
+
+  @override
+  String get playerFitStretch => 'Stretch';
+
+  @override
+  String playerAspect(String mode) {
+    return 'Picture size: $mode';
+  }
+
+  @override
+  String get playerPrevious => 'Previous file';
+
+  @override
+  String get playerNext => 'Next file';
+
+  @override
+  String get playerRepeat => 'Repeat';
+
+  @override
+  String get playerSleepTimer => 'Sleep timer';
+
+  @override
+  String playerSleepTimerSet(int minutes) {
+    return 'Sleep timer · $minutes min';
+  }
+
+  @override
+  String get sleepOff => 'Off';
+
+  @override
+  String sleepMinutes(int minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String sleepIn(int minutes) {
+    return 'Pauses in $minutes min';
+  }
+
+  @override
+  String get sleepTimerOff => 'Sleep timer off';
+
+  @override
+  String get playerSaveFrame => 'Save this frame as a photo';
+
+  @override
+  String frameSaved(String name) {
+    return 'Saved $name';
+  }
+
+  @override
+  String get frameSaveFailed => 'Couldn\'t save this frame';
+
+  @override
+  String resumedFrom(String time) {
+    return 'Carrying on from $time';
+  }
+
+  @override
+  String percent(int value) {
+    return '$value%';
   }
 }

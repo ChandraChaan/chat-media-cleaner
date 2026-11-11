@@ -54,6 +54,7 @@ final class MediaFile {
     DateTime? modified,
     MediaType? type,
     bool? isSent,
+    String? mimeType,
   }) => MediaFile(
     id: id ?? this.id,
     sourceId: sourceId,
@@ -64,7 +65,7 @@ final class MediaFile {
     modified: modified ?? this.modified,
     type: type ?? this.type,
     isSent: isSent ?? this.isSent,
-    mimeType: mimeType,
+    mimeType: mimeType ?? this.mimeType,
   );
 
   @override

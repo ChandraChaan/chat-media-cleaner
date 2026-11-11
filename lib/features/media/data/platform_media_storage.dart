@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 
 import '../domain/media_storage.dart';
 
-/// [MediaStorage], [MediaViewer] and [FolderAccess] backed by the Android
+/// [MediaStorage], [MediaViewer], [FolderAccess] and [ScreenControl] backed
+/// by the Android
 /// Storage Access Framework code in `StorageChannel.kt`.
 final class PlatformMediaStorage
-    implements MediaStorage, MediaViewer, FolderAccess {
+    implements MediaStorage, MediaViewer, FolderAccess, ScreenControl {
   PlatformMediaStorage([this._channel = const MethodChannel(channelName)]);
 
   static const channelName = 'dev.chandra.chat_media_cleaner/storage';
@@ -88,6 +89,23 @@ final class PlatformMediaStorage
       _call<void>('deleteTrashItem', {'treeUri': treeUri, 'docId': itemDirId});
 
   @override
+  Future<String> rename(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required String newName,
+  }) async {
+    final map = await _call<Map<Object?, Object?>>('rename', {
+      'treeUri': treeUri,
+      'docId': fileId,
+      'parentId': parentId,
+      'name': newName,
+    });
+    _thumbnails.removeWhere((key, _) => key.startsWith('$treeUri|$fileId|'));
+    return map!['id']! as String;
+  }
+
+  @override
   Future<Uint8List?> thumbnail(
     String treeUri,
     String fileId, {
@@ -123,14 +141,121 @@ final class PlatformMediaStorage
     String treeUri,
     String fileId, {
     int maxBytes = 30 * 1024 * 1024,
+    bool truncate = false,
   }) async {
     final bytes = await _call<Uint8List>('readBytes', {
       'treeUri': treeUri,
       'docId': fileId,
       'maxBytes': maxBytes,
+      'truncate': truncate,
     });
     return bytes!;
   }
+
+  @override
+  Future<String> contentUri(String treeUri, String fileId) async =>
+      (await _call<String>('documentUri', {
+        'treeUri': treeUri,
+        'docId': fileId,
+      }))!;
+
+  @override
+  Future<MediaInfo> mediaInfo(String treeUri, String fileId) async {
+    final map = await _call<Map<Object?, Object?>>('mediaInfo', {
+      'treeUri': treeUri,
+      'docId': fileId,
+    });
+    final millis = map?['durationMs'] as int?;
+    return MediaInfo(
+      width: map?['width'] as int?,
+      height: map?['height'] as int?,
+      duration: millis == null ? null : Duration(milliseconds: millis),
+    );
+  }
+
+  @override
+  Future<int> pdfPageCount(String treeUri, String fileId) async =>
+      (await _call<int>('pdfPageCount', {
+        'treeUri': treeUri,
+        'docId': fileId,
+      })) ??
+      0;
+
+  @override
+  Future<PdfPageImage> pdfPage(
+    String treeUri,
+    String fileId,
+    int index, {
+    required int width,
+  }) async {
+    final map = await _call<Map<Object?, Object?>>('pdfPage', {
+      'treeUri': treeUri,
+      'docId': fileId,
+      'index': index,
+      'width': width,
+    });
+    return PdfPageImage(
+      bytes: map!['bytes']! as Uint8List,
+      width: map['width']! as int,
+      height: map['height']! as int,
+    );
+  }
+
+  @override
+  Future<void> closePdf() => _call<void>('pdfClose');
+
+  @override
+  Future<void> keepScreenOn({required bool on}) =>
+      _call<void>('keepScreenOn', {'on': on});
+
+  @override
+  Future<double?> brightness() => _call<double>('brightness');
+
+  @override
+  Future<void> setBrightness(double? value) =>
+      _call<void>('setBrightness', {'value': value});
+
+  @override
+  Future<({int current, int max})> volume() async {
+    final map = await _call<Map<Object?, Object?>>('volume');
+    return (
+      current: (map?['current'] as int?) ?? 0,
+      max: (map?['max'] as int?) ?? 1,
+    );
+  }
+
+  @override
+  Future<void> setVolume(int value) =>
+      _call<void>('setVolume', {'value': value});
+
+  @override
+  Future<String> saveVideoFrame(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required Duration position,
+    required String name,
+  }) async {
+    final map = await _call<Map<Object?, Object?>>('saveVideoFrame', {
+      'treeUri': treeUri,
+      'docId': fileId,
+      'parentId': parentId,
+      'positionMs': position.inMilliseconds,
+      'name': name,
+    });
+    return map!['name']! as String;
+  }
+
+  @override
+  Future<void> share(
+    List<({String treeUri, String fileId})> files, {
+    String? mimeType,
+  }) => _call<void>('share', {
+    'items': [
+      for (final f in files) {'treeUri': f.treeUri, 'docId': f.fileId},
+    ],
+    'mime': mimeType,
+  });
 
   @override
   Future<void> openExternally(
@@ -183,6 +308,9 @@ final class PlatformMediaStorage
     'permission' => StorageError.permissionLost,
     'no_app' => StorageError.noApp,
     'too_large' => StorageError.tooLarge,
+    'exists' => StorageError.nameTaken,
+    'locked' => StorageError.locked,
+    'unreadable' => StorageError.unreadable,
     _ => StorageError.failed,
   };
 }

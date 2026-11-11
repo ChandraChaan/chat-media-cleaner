@@ -20,6 +20,13 @@ final class MediaSource {
 
   String get id => treeUri;
 
+  /// The name of the folder itself, for folders that belong to no known app.
+  String get folderName {
+    final path = SourceLocator.pathOf(rootId);
+    final slash = path.lastIndexOf('/');
+    return slash < 0 ? path : path.substring(slash + 1);
+  }
+
   Map<String, Object?> toJson() => {
     'treeUri': treeUri,
     'rootId': rootId,
@@ -94,11 +101,13 @@ abstract final class SourceLocator {
   /// (for example `Android/media/com.whatsapp` or even `Android/media`, which
   /// can hold both apps). A folder elsewhere is accepted when it directly
   /// contains WhatsApp-style media folders, for example a copy on an SD card.
-  /// Throws [NotAChatMediaFolder] otherwise.
+  /// Throws [NotAChatMediaFolder] otherwise, unless [acceptAny] is set:
+  /// then any other folder is taken as it is, as [ChatApp.other].
   static Future<List<MediaSource>> resolve(
     MediaStorage storage,
-    PickedFolder picked,
-  ) async {
+    PickedFolder picked, {
+    bool acceptAny = false,
+  }) async {
     final path = _trimSlashes(pathOf(picked.treeDocId));
     final known = {
       for (final e in _modern.entries) e.value: e.key,
@@ -135,7 +144,7 @@ abstract final class SourceLocator {
     }
     if (sources.isNotEmpty) return _onePerApp(sources);
 
-    if (await _looksLikeMediaFolder(storage, picked)) {
+    if (acceptAny || await _looksLikeMediaFolder(storage, picked)) {
       return [
         MediaSource(
           treeUri: picked.treeUri,

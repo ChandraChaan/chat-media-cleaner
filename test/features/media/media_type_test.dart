@@ -55,6 +55,18 @@ void main() {
       );
     });
 
+    test('maps Telegram folders the same way', () {
+      expect(
+        MediaClassifier.classify('Telegram Images/a.jpg'),
+        MediaType.image,
+      );
+      expect(MediaClassifier.classify('Telegram Video/a.mp4'), MediaType.video);
+      expect(
+        MediaClassifier.classify('Telegram Documents/a.pdf'),
+        MediaType.document,
+      );
+    });
+
     test('falls back to the MIME type outside known folders', () {
       expect(
         MediaClassifier.classify('Other/a.jpg', mimeType: 'image/jpeg'),

@@ -254,4 +254,41 @@ void main() {
       expect(monthsBefore(local, 0).isUtc, isTrue);
     });
   });
+
+  group('folders that are not a chat app\'s', () {
+    MediaFile inSource(String source) => MediaFile(
+      id: 'id:$source',
+      sourceId: source,
+      parentId: 'p',
+      name: 'IMG.jpg',
+      relativePath: 'IMG.jpg',
+      size: 2 * _mb,
+      modified: DateTime.utc(2020),
+      type: MediaType.image,
+    );
+
+    test('are left out of old forwards but still counted and sized', () {
+      final report = MediaAnalyzer.analyze(
+        [inSource('chat'), inSource('camera')],
+        rules: const AnalysisRules(),
+        now: _now,
+        chatSourceIds: const {'chat'},
+      );
+      expect(
+        report.group(SmartGroup.oldForwards).files.map((f) => f.sourceId),
+        ['chat'],
+      );
+      expect(report.totalCount, 2);
+      expect(report.group(SmartGroup.largest).count, 2);
+    });
+
+    test('every source counts as a chat app when none are named', () {
+      final report = MediaAnalyzer.analyze(
+        [inSource('a'), inSource('b')],
+        rules: const AnalysisRules(),
+        now: _now,
+      );
+      expect(report.group(SmartGroup.oldForwards).count, 2);
+    });
+  });
 }

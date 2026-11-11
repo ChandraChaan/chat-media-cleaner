@@ -9,7 +9,7 @@
   "accessStep1": "Tap Choose WhatsApp folder below.",
   "accessStep2": "Android's file picker opens at Android › media › com.whatsapp › WhatsApp › Media.",
   "accessStep3": "Tap Use this folder, then Allow.",
-  "promiseOnlyFolder": "Only the folder you choose. Nothing else on your phone.",
+  "promiseOnlyFolder": "Only the folders you choose. Nothing else on your phone.",
   "promiseOffline": "No internet permission: nothing ever leaves your phone.",
   "promiseReview": "Nothing is deleted until you select files and confirm.",
   "promiseTrash": "Deleted files wait in the app's trash first, so you can restore them.",
@@ -28,7 +28,7 @@
       }
     }
   },
-  "folderNotChatMedia": "That folder doesn't contain WhatsApp media. Choose the Media folder inside WhatsApp.",
+  "folderNotChatMedia": "That folder doesn't contain WhatsApp media. Choose the Media folder inside WhatsApp, or use Choose another folder.",
   "folderPickFailed": "Couldn't open the folder picker. Please try again.",
   "trashTitle": "Trash",
   "settingsTitle": "Settings",
@@ -114,7 +114,7 @@
   "typeGifs": "GIFs",
   "typeStatuses": "Statuses",
   "typeOther": "Other",
-  "reviewHint": "Tap to select. Touch and hold to preview.",
+  "reviewHint": "Tap to select. Touch and hold to open.",
   "reviewEmpty": "Nothing left here.",
   "previewHint": "preview",
   "selectAll": "Select all",
@@ -386,6 +386,245 @@
   "@trashTooltip": {
     "placeholders": {
       "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tabClean": "Clean up",
+  "tabFiles": "Files",
+  "filesTitle": "Files",
+  "filesIntro": "Browse the folders you chose, open anything right here, and share, rename or delete files.",
+  "chooseOtherFolder": "Choose another folder",
+  "accessOtherHint": "Other folders work too, for example Telegram, Download or Camera: tap Choose another folder and pick one.",
+  "folderStats": "{count, plural, =1{1 file} other{{formatted} files}} · {size}",
+  "@folderStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "folderEmpty": "This folder is empty",
+  "folderLoadFailed": "Couldn't open this folder. It may have been moved or deleted.",
+  "searchHint": "Search in this folder",
+  "searchTooltip": "Search",
+  "searchClose": "Close search",
+  "searchNoResults": "Nothing here matches \"{query}\".",
+  "@searchNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "viewAsGrid": "Show as grid",
+  "viewAsList": "Show as list",
+  "sortName": "Name",
+  "sortSmallest": "Smallest first",
+  "selectedCount": "{count, plural, =1{1 selected} other{{formatted} selected}}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelSelection": "Cancel selection",
+  "fileMenuTooltip": "More actions for {name}",
+  "@fileMenuTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "actionOpen": "Open",
+  "actionShare": "Share",
+  "actionRename": "Rename",
+  "actionDetails": "Details",
+  "actionMore": "More",
+  "actionSave": "Save",
+  "actionClose": "Close",
+  "shareTooMany": "Share up to {max} files at a time.",
+  "@shareTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "renameTitle": "Rename file",
+  "renameLabel": "File name",
+  "renameWarning": "A chat app may no longer show a file after it is renamed.",
+  "renameEmpty": "Type a name.",
+  "renameBadCharacter": "A name can't contain / \\ : * ? \" < > |",
+  "renameReserved": "That name can't be used.",
+  "renameTooLong": "That name is too long.",
+  "renameTaken": "This folder already has a file with that name.",
+  "renameFailed": "Couldn't rename the file.",
+  "renamed": "Renamed to {name}.",
+  "@renamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "detailName": "Name",
+  "detailDimensions": "Dimensions",
+  "detailDuration": "Length",
+  "dimensions": "{width} × {height}",
+  "@dimensions": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "viewerPosition": "{index} of {total}",
+  "@viewerPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "viewerNoPreview": "This kind of file can't be shown here.",
+  "viewerCantPlay": "This file can't be played here.",
+  "viewerCantShow": "This file couldn't be opened. It may be damaged.",
+  "viewerPdfLocked": "This PDF needs a password. Open it with another app.",
+  "viewerTextTruncated": "Only the beginning of this file is shown.",
+  "pdfPage": "Page {page} of {total}",
+  "@pdfPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "playerPlay": "Play",
+  "playerPause": "Pause",
+  "playerReplay": "Play again",
+  "playerMute": "Mute",
+  "playerUnmute": "Unmute",
+  "playerSpeed": "Playback speed",
+  "playerSpeedNormal": "Normal",
+  "playerLoopOn": "Repeat is on",
+  "playerLoopOff": "Repeat is off",
+  "playerFullscreen": "Full screen",
+  "playerExitFullscreen": "Exit full screen",
+  "playerBack": "Back {seconds} seconds",
+  "@playerBack": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "playerForward": "Forward {seconds} seconds",
+  "@playerForward": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "playerSkipped": "{seconds} s",
+  "@playerSkipped": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "playerPosition": "Position",
+  "openHint": "open",
+  "browseHint": "Tap to open. Touch and hold to select.",
+  "viewerToggleControls": "Show or hide the controls",
+  "playerLock": "Lock the controls",
+  "playerUnlock": "Unlock",
+  "playerLocked": "Locked",
+  "playerFitFit": "Fit to screen",
+  "playerFitCrop": "Crop to fill",
+  "playerFitStretch": "Stretch",
+  "playerAspect": "Picture size: {mode}",
+  "@playerAspect": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerPrevious": "Previous file",
+  "playerNext": "Next file",
+  "playerRepeat": "Repeat",
+  "playerSleepTimer": "Sleep timer",
+  "playerSleepTimerSet": "Sleep timer · {minutes} min",
+  "@playerSleepTimerSet": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sleepOff": "Off",
+  "sleepMinutes": "{minutes} minutes",
+  "@sleepMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sleepIn": "Pauses in {minutes} min",
+  "@sleepIn": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "sleepTimerOff": "Sleep timer off",
+  "playerSaveFrame": "Save this frame as a photo",
+  "frameSaved": "Saved {name}",
+  "@frameSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "frameSaveFailed": "Couldn't save this frame",
+  "resumedFrom": "Carrying on from {time}",
+  "@resumedFrom": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "percent": "{value}%",
+  "@percent": {
+    "placeholders": {
+      "value": {
         "type": "int"
       }
     }

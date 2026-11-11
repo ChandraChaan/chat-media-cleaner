@@ -82,5 +82,30 @@ object ThumbnailMath {
     }
 }
 
+/** Bitmap sizes for drawing PDF pages. */
+object PdfMath {
+    /** Wider than this adds memory without adding anything a phone screen can show. */
+    const val MAX_WIDTH = 2048
+
+    /** About 32 MB as ARGB_8888; very tall pages are drawn narrower to stay below it. */
+    const val MAX_PIXELS = 8_000_000L
+
+    /**
+     * The bitmap size for a page of [pageWidth] x [pageHeight] points drawn
+     * [targetWidth] pixels wide, keeping the page's shape.
+     */
+    fun renderSize(pageWidth: Int, pageHeight: Int, targetWidth: Int): Pair<Int, Int> {
+        if (pageWidth <= 0 || pageHeight <= 0) return 1 to 1
+        var width = targetWidth.coerceIn(1, MAX_WIDTH)
+        var height = maxOf(1, Math.round(width.toDouble() * pageHeight / pageWidth).toInt())
+        if (width.toLong() * height > MAX_PIXELS) {
+            val scale = Math.sqrt(MAX_PIXELS.toDouble() / (width.toLong() * height))
+            width = maxOf(1, (width * scale).toInt())
+            height = maxOf(1, (height * scale).toInt())
+        }
+        return width to height
+    }
+}
+
 /** A storage failure with an error code the Dart side understands. */
 class StorageFailure(val code: String, message: String) : Exception(message)

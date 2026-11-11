@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../features/browse/domain/browse_entry.dart';
 import '../features/media/domain/media_report.dart';
 import '../features/media/domain/media_source.dart';
 import '../features/media/domain/media_type.dart';
+import '../features/viewer/domain/view_kind.dart';
 import '../l10n/app_localizations.dart';
 
 /// Display names and icons for domain enums.
@@ -63,5 +65,35 @@ extension ChatAppLabels on ChatApp {
     ChatApp.whatsapp => l10n.appWhatsApp,
     ChatApp.whatsappBusiness => l10n.appWhatsAppBusiness,
     ChatApp.other => l10n.appOtherFolder,
+  };
+}
+
+extension MediaSourceLabels on MediaSource {
+  /// The app's name, or the folder's own name for any other folder.
+  String label(AppLocalizations l10n) {
+    if (app != ChatApp.other) return app.label(l10n);
+    final name = folderName;
+    return name.isEmpty ? l10n.appOtherFolder : name;
+  }
+}
+
+extension BrowseSortLabels on BrowseSort {
+  String label(AppLocalizations l10n) => switch (this) {
+    BrowseSort.name => l10n.sortName,
+    BrowseSort.newest => l10n.sortNewest,
+    BrowseSort.oldest => l10n.sortOldest,
+    BrowseSort.largest => l10n.sortLargest,
+    BrowseSort.smallest => l10n.sortSmallest,
+  };
+}
+
+extension ViewKindIcons on ViewKind {
+  IconData get icon => switch (this) {
+    ViewKind.image => Icons.image_outlined,
+    ViewKind.video => Icons.videocam_outlined,
+    ViewKind.audio => Icons.graphic_eq,
+    ViewKind.pdf => Icons.picture_as_pdf_outlined,
+    ViewKind.text => Icons.article_outlined,
+    ViewKind.other => Icons.insert_drive_file_outlined,
   };
 }

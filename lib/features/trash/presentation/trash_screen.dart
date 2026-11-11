@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../core/format.dart';
 import '../../../core/l10n.dart';
@@ -224,7 +225,7 @@ class _TrashTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final locale = context.localeName;
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(clockProvider)().toUtc();
     final left = entry.expiresAt(Duration(days: days)).difference(now);
     final daysLeft = (left.inHours / 24).ceil().clamp(0, days);
     final folder = entry.relativePath.contains('/')

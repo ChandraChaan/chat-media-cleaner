@@ -53,6 +53,36 @@ final class PickedFolder {
   final String treeDocId;
 }
 
+/// What is known about a picture, video or sound beyond its size and date.
+final class MediaInfo {
+  const MediaInfo({this.width, this.height, this.duration});
+
+  static const none = MediaInfo();
+
+  /// Pixel size of a picture or video, as it is shown (rotation applied).
+  final int? width;
+  final int? height;
+
+  /// How long a video or sound lasts.
+  final Duration? duration;
+
+  bool get hasDimensions => width != null && height != null;
+}
+
+/// One page of a PDF drawn as a picture.
+final class PdfPageImage {
+  const PdfPageImage({
+    required this.bytes,
+    required this.width,
+    required this.height,
+  });
+
+  /// An encoded image (JPEG).
+  final Uint8List bytes;
+  final int width;
+  final int height;
+}
+
 /// File operations on the folders the user granted access to.
 ///
 /// On Android this is the Storage Access Framework; tests use an in-memory
@@ -85,6 +115,25 @@ abstract interface class MediaStorage {
 
   /// Permanently deletes a trash item folder and the file inside it.
   Future<void> deleteTrashItem(String treeUri, String itemDirId);
+
+  /// Gives the file in [parentId] a new name and returns its new id. Throws
+  /// [StorageError.nameTaken] when the folder already has a [newName].
+  Future<String> rename(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required String newName,
+  });
+
+  /// Saves the picture a video shows at [position] as a JPEG called [name]
+  /// (numbered when taken) in the same folder. Returns the name it got.
+  Future<String> saveVideoFrame(
+    String treeUri, {
+    required String fileId,
+    required String parentId,
+    required Duration position,
+    required String name,
+  });
 }
 
 /// Showing files: thumbnails, previews and opening in another app.
@@ -92,10 +141,62 @@ abstract interface class MediaViewer {
   Future<Uint8List?> thumbnail(String treeUri, String fileId, {int size});
 
   /// The file's bytes, for showing a photo full screen. Throws
-  /// [StorageException] when it is larger than [maxBytes].
-  Future<Uint8List> readBytes(String treeUri, String fileId, {int maxBytes});
+  /// [StorageException] when it is larger than [maxBytes], unless
+  /// [truncate] is set: then only the first [maxBytes] bytes are returned.
+  Future<Uint8List> readBytes(
+    String treeUri,
+    String fileId, {
+    int maxBytes,
+    bool truncate,
+  });
 
   Future<void> openExternally(String treeUri, String fileId, String? mimeType);
+
+  /// An address the video and audio player can read the file from.
+  Future<String> contentUri(String treeUri, String fileId);
+
+  /// Pixel size and duration, where the file has them.
+  Future<MediaInfo> mediaInfo(String treeUri, String fileId);
+
+  /// Throws [StorageError.locked] for a password-protected PDF and
+  /// [StorageError.unreadable] for a damaged one.
+  Future<int> pdfPageCount(String treeUri, String fileId);
+
+  /// Page [index] (from 0) drawn about [width] pixels wide.
+  Future<PdfPageImage> pdfPage(
+    String treeUri,
+    String fileId,
+    int index, {
+    required int width,
+  });
+
+  /// Frees what [pdfPageCount] and [pdfPage] keep open.
+  Future<void> closePdf();
+
+  /// Opens the system share sheet for [files].
+  Future<void> share(
+    List<({String treeUri, String fileId})> files, {
+    String? mimeType,
+  });
+}
+
+/// The phone's screen and sound, as the video player changes them.
+abstract interface class ScreenControl {
+  /// Keeps the screen from dimming and locking, while a video plays.
+  Future<void> keepScreenOn({required bool on});
+
+  /// The app's own screen brightness from 0 to 1, or null while the screen
+  /// follows the system setting.
+  Future<double?> brightness();
+
+  /// Sets the brightness for this app only; null gives it back to the
+  /// system setting.
+  Future<void> setBrightness(double? value);
+
+  /// The media volume in the phone's own steps.
+  Future<({int current, int max})> volume();
+
+  Future<void> setVolume(int value);
 }
 
 /// Asking for, listing and giving up folder access.
@@ -129,6 +230,15 @@ enum StorageError {
 
   /// The file is too large for the requested operation.
   tooLarge,
+
+  /// Another file in the folder already has that name.
+  nameTaken,
+
+  /// The file needs a password.
+  locked,
+
+  /// The file is damaged or not what its name says.
+  unreadable,
 
   /// Anything else.
   failed,
