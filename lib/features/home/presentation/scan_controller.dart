@@ -171,6 +171,17 @@ final class ScanController extends Notifier<ScanState> {
     }
   }
 
+  /// Swaps a file for its renamed self.
+  void replaceFile(String oldKey, MediaFile file) {
+    if (state case final ScanReady ready) {
+      if (!ready.files.any((f) => f.key == oldKey)) return;
+      state = ready.withFiles([
+        for (final f in ready.files)
+          if (f.key == oldKey) file else f,
+      ]);
+    }
+  }
+
   void _onSourcesChanged(List<MediaSource> previous, List<MediaSource> next) {
     final before = {for (final s in previous) s.id};
     final after = {for (final s in next) s.id};
@@ -194,10 +205,17 @@ final mediaReportProvider = Provider<MediaReport?>((ref) {
       (s) => s.value?.oldAfterMonths ?? AppSettings.defaultOldAfterMonths,
     ),
   );
+  final sources = ref.watch(
+    settingsControllerProvider.select((s) => s.value?.sources ?? const []),
+  );
   return MediaAnalyzer.analyze(
     scan.files,
     rules: AnalysisRules(oldAfterMonths: months),
     now: ref.read(clockProvider)(),
     duplicates: scan.duplicates,
+    chatSourceIds: {
+      for (final s in sources)
+        if (s.app != ChatApp.other) s.id,
+    },
   );
 });

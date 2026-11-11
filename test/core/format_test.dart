@@ -28,4 +28,22 @@ void main() {
   test('formatDate shows a short local date', () {
     expect(formatDate(DateTime(2024, 3, 5, 12), 'en'), 'Mar 5, 2024');
   });
+
+  test('formatDuration reads like a player', () {
+    expect(formatDuration(Duration.zero), '0:00');
+    expect(formatDuration(const Duration(seconds: 7)), '0:07');
+    expect(formatDuration(const Duration(minutes: 3, seconds: 25)), '3:25');
+    expect(
+      formatDuration(const Duration(hours: 1, minutes: 2, seconds: 9)),
+      '1:02:09',
+    );
+    expect(formatDuration(const Duration(seconds: -5)), '0:00');
+  });
+
+  test('formatDateTime adds the time of day', () {
+    expect(
+      formatDateTime(DateTime(2024, 3, 5, 14, 5), 'en'),
+      'Mar 5, 2024 14:05',
+    );
+  });
 }

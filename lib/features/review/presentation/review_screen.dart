@@ -7,9 +7,9 @@ import '../../../core/media_labels.dart';
 import '../../media/domain/media_file.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../settings/presentation/settings_controller.dart';
+import '../../viewer/presentation/viewer_screen.dart';
 import 'media_tile.dart';
 import 'move_to_trash_flow.dart';
-import 'preview_screen.dart';
 import 'review_controller.dart';
 
 void openReview(BuildContext context, ReviewTarget target) {
@@ -18,7 +18,7 @@ void openReview(BuildContext context, ReviewTarget target) {
   ).push(MaterialPageRoute<void>(builder: (_) => ReviewScreen(target: target)));
 }
 
-/// A grid of files to pick from. Tap selects, touch and hold previews.
+/// A grid of files to pick from. Tap selects, touch and hold opens.
 class ReviewScreen extends ConsumerWidget {
   const ReviewScreen({required this.target, super.key});
 
@@ -110,7 +110,12 @@ class ReviewScreen extends ConsumerWidget {
                         file: file,
                         selected: selected.contains(file.key),
                         onTap: () => selection.toggle(file),
-                        onLongPress: () => _preview(context, file),
+                        onLongPress: () => openViewer(
+                          context,
+                          files: files,
+                          index: index,
+                          selectionTarget: target,
+                        ),
                       );
                     },
                   ),
@@ -125,14 +130,6 @@ class ReviewScreen extends ConsumerWidget {
               target: target,
               onMove: (files) => moveToTrashFlow(context, ref, files),
             ),
-    );
-  }
-
-  void _preview(BuildContext context, MediaFile file) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PreviewScreen(file: file, target: target),
-      ),
     );
   }
 }

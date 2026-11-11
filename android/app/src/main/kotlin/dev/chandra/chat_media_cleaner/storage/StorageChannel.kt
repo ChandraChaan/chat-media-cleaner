@@ -2,18 +2,24 @@ package dev.chandra.chat_media_cleaner.storage
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.ContentResolver
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Point
+import android.graphics.pdf.PdfRenderer
+import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
+import android.view.WindowManager
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -48,6 +54,11 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
 
     private val io: ExecutorService = Executors.newFixedThreadPool(2)
     private val thumbs: ExecutorService = Executors.newFixedThreadPool(3)
+
+    /** One thread, because a PdfRenderer shows one page at a time. */
+    private val pdf: ExecutorService = Executors.newSingleThreadExecutor()
+    private var openPdf: OpenPdf? = null
+    private val audio: AudioManager get() = activity.getSystemService(AudioManager::class.java)
     private val main = Handler(Looper.getMainLooper())
     private val resolver: ContentResolver get() = activity.contentResolver
     private val trashDirs = ConcurrentHashMap<String, String>()
@@ -90,8 +101,65 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                 thumbnail(call.tree(), call.str("docId"), call.argument<Int>("size") ?: 256)
             }
             "readBytes" -> run(io, result) {
-                readBytes(call.tree(), call.str("docId"), call.argument<Int>("maxBytes") ?: Int.MAX_VALUE)
+                readBytes(
+                    call.tree(),
+                    call.str("docId"),
+                    call.argument<Int>("maxBytes") ?: Int.MAX_VALUE,
+                    call.argument<Boolean>("truncate") ?: false,
+                )
             }
+            "documentUri" -> result.success(docUri(call.tree(), call.str("docId")).toString())
+            "rename" -> run(io, result) {
+                rename(call.tree(), call.str("docId"), call.str("parentId"), call.str("name"))
+            }
+            "mediaInfo" -> run(io, result) { mediaInfo(call.tree(), call.str("docId")) }
+            "pdfPageCount" -> run(pdf, result) { pdfFor(call.tree(), call.str("docId")).renderer.pageCount }
+            "pdfPage" -> run(pdf, result) {
+                pdfPage(
+                    call.tree(),
+                    call.str("docId"),
+                    call.argument<Int>("index") ?: 0,
+                    call.argument<Int>("width") ?: 1080,
+                )
+            }
+            "pdfClose" -> run(pdf, result) { closePdf() }
+            "keepScreenOn" -> {
+                keepScreenOn(call.argument<Boolean>("on") ?: false)
+                result.success(null)
+            }
+            "brightness" -> {
+                val value = activity.window.attributes.screenBrightness
+                result.success(if (value < 0f) null else value.toDouble())
+            }
+            "setBrightness" -> {
+                setBrightness(call.argument<Double>("value"))
+                result.success(null)
+            }
+            "volume" -> result.success(
+                mapOf(
+                    "current" to audio.getStreamVolume(AudioManager.STREAM_MUSIC),
+                    "max" to audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+                ),
+            )
+            "setVolume" -> {
+                val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                audio.setStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    (call.argument<Int>("value") ?: 0).coerceIn(0, max),
+                    0,
+                )
+                result.success(null)
+            }
+            "saveVideoFrame" -> run(io, result) {
+                saveVideoFrame(
+                    call.tree(),
+                    docId = call.str("docId"),
+                    parentId = call.str("parentId"),
+                    positionMs = (call.argument<Number>("positionMs") ?: 0).toLong(),
+                    name = call.str("name"),
+                )
+            }
+            "share" -> share(call.argument<List<Map<String, String>>>("items") ?: emptyList(), call.argument<String>("mime"), result)
             "openExternally" -> openExternally(call.tree(), call.str("docId"), call.argument<String>("mime"), result)
             else -> result.notImplemented()
         }
@@ -124,6 +192,8 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     fun dispose() {
         io.shutdownNow()
         thumbs.shutdownNow()
+        pdf.execute { closePdf() }
+        pdf.shutdown()
         pendingPick?.success(null)
         pendingPick = null
     }
@@ -310,12 +380,205 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
     }
 
-    private fun readBytes(tree: Uri, docId: String, maxBytes: Int): ByteArray {
+    /** The whole file, or with [truncate] only its first [maxBytes] bytes. */
+    private fun readBytes(tree: Uri, docId: String, maxBytes: Int, truncate: Boolean): ByteArray {
         val uri = docUri(tree, docId)
         val size = querySingle(uri, Document.COLUMN_SIZE)?.toLongOrNull() ?: 0L
-        if (size > maxBytes) throw StorageFailure("too_large", "$size bytes")
-        return resolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: throw FileNotFoundException(docId)
+        if (size > maxBytes && !truncate) throw StorageFailure("too_large", "$size bytes")
+        return resolver.openInputStream(uri)?.use { input ->
+            if (size <= maxBytes) {
+                input.readBytes()
+            } else {
+                val buffer = ByteArray(maxBytes)
+                var filled = 0
+                while (filled < maxBytes) {
+                    val read = input.read(buffer, filled, maxBytes - filled)
+                    if (read < 0) break
+                    filled += read
+                }
+                buffer.copyOf(filled)
+            }
+        } ?: throw FileNotFoundException(docId)
+    }
+
+    /**
+     * Renames a file in place. The provider would silently number a name that
+     * is taken, so a clash is reported instead.
+     */
+    private fun rename(tree: Uri, docId: String, parentId: String, name: String): Map<String, String> {
+        if (!exists(tree, docId)) throw FileNotFoundException(docId)
+        if (name in childNames(tree, parentId)) throw StorageFailure("exists", name)
+        val renamed = DocumentsContract.renameDocument(resolver, docUri(tree, docId), name)
+            ?: throw IOException("Could not rename $docId")
+        val newId = DocumentsContract.getDocumentId(renamed)
+        return mapOf("id" to newId, "name" to (querySingle(docUri(tree, newId), Document.COLUMN_DISPLAY_NAME) ?: name))
+    }
+
+    /** Pixel size of a picture or video, and how long a video or sound lasts. */
+    private fun mediaInfo(tree: Uri, docId: String): Map<String, Any?> {
+        val uri = docUri(tree, docId)
+        val mime = resolver.getType(uri) ?: ""
+        if (mime.startsWith("image/")) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            return mapOf(
+                "width" to bounds.outWidth.takeIf { it > 0 },
+                "height" to bounds.outHeight.takeIf { it > 0 },
+                "durationMs" to null,
+            )
+        }
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(activity, uri)
+            fun number(key: Int) = retriever.extractMetadata(key)?.toLongOrNull()
+            val rotated = (number(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION) ?: 0L) % 180L != 0L
+            val w = number(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+            val h = number(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+            mapOf(
+                "width" to (if (rotated) h else w)?.toInt(),
+                "height" to (if (rotated) w else h)?.toInt(),
+                "durationMs" to number(MediaMetadataRetriever.METADATA_KEY_DURATION),
+            )
+        } catch (_: Exception) {
+            // Not a media file, or one the phone cannot read: no details.
+            mapOf("width" to null, "height" to null, "durationMs" to null)
+        } finally {
+            retriever.release()
+        }
+    }
+
+    /** The open PDF for [docId], opening it (and closing another one) first. */
+    private fun pdfFor(tree: Uri, docId: String): OpenPdf {
+        val uri = docUri(tree, docId)
+        openPdf?.let { if (it.uri == uri) return it }
+        closePdf()
+        val descriptor = resolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(docId)
+        val renderer = try {
+            PdfRenderer(descriptor)
+        } catch (e: SecurityException) {
+            descriptor.close()
+            throw StorageFailure("locked", "Password-protected PDF")
+        } catch (e: Exception) {
+            descriptor.close()
+            throw StorageFailure("unreadable", e.message ?: "Not a readable PDF")
+        }
+        return OpenPdf(uri, descriptor, renderer).also { openPdf = it }
+    }
+
+    private fun pdfPage(tree: Uri, docId: String, index: Int, width: Int): Map<String, Any> {
+        val renderer = pdfFor(tree, docId).renderer
+        if (index < 0 || index >= renderer.pageCount) throw FileNotFoundException("page $index")
+        renderer.openPage(index).use { page ->
+            val (w, h) = PdfMath.renderSize(page.width, page.height, width)
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            try {
+                // Pages are transparent where nothing is drawn.
+                bitmap.eraseColor(Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                val out = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                return mapOf("bytes" to out.toByteArray(), "width" to w, "height" to h)
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    /** Stops the screen from dimming and locking while a video plays. */
+    private fun keepScreenOn(on: Boolean) {
+        if (on) {
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    /** Sets this window's brightness (0 to 1); null follows the system setting again. */
+    private fun setBrightness(value: Double?) {
+        activity.window.attributes = activity.window.attributes.apply {
+            screenBrightness = value?.toFloat()?.coerceIn(0.02f, 1f)
+                ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        }
+    }
+
+    /** Saves the picture a video shows at [positionMs] as a JPEG next to it. */
+    private fun saveVideoFrame(
+        tree: Uri,
+        docId: String,
+        parentId: String,
+        positionMs: Long,
+        name: String,
+    ): Map<String, String> {
+        val retriever = MediaMetadataRetriever()
+        val frame = try {
+            retriever.setDataSource(activity, docUri(tree, docId))
+            retriever.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
+        } catch (e: Exception) {
+            throw StorageFailure("unreadable", e.message ?: "No frame")
+        } finally {
+            retriever.release()
+        } ?: throw StorageFailure("unreadable", "No frame at $positionMs ms")
+        try {
+            val freeName = Names.firstFree(name, childNames(tree, parentId))
+            val created = DocumentsContract.createDocument(resolver, docUri(tree, parentId), "image/jpeg", freeName)
+                ?: throw IOException("Could not create $freeName")
+            try {
+                resolver.openOutputStream(created)?.use { frame.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+                    ?: throw IOException("Could not write $freeName")
+            } catch (e: Exception) {
+                deleteQuietly(created)
+                throw e
+            }
+            val newId = DocumentsContract.getDocumentId(created)
+            return mapOf(
+                "id" to newId,
+                "name" to (querySingle(created, Document.COLUMN_DISPLAY_NAME) ?: freeName),
+            )
+        } finally {
+            frame.recycle()
+        }
+    }
+
+    private fun closePdf() {
+        val open = openPdf ?: return
+        openPdf = null
+        try {
+            open.renderer.close()
+            open.descriptor.close()
+        } catch (_: Exception) {
+            // Closing twice or after the file went away is harmless.
+        }
+    }
+
+    /** Opens the system share sheet for one or more files. */
+    private fun share(items: List<Map<String, String>>, mime: String?, result: MethodChannel.Result) {
+        val uris = ArrayList<Uri>()
+        for (item in items) {
+            val tree = item["treeUri"] ?: continue
+            val docId = item["docId"] ?: continue
+            uris += docUri(Uri.parse(tree), docId)
+        }
+        if (uris.isEmpty()) {
+            result.error("not_found", "Nothing to share", null)
+            return
+        }
+        val send = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        }
+        send.type = mime ?: "*/*"
+        // The clip data is what carries the read grant for every file.
+        val clip = ClipData.newUri(resolver, "", uris[0])
+        for (uri in uris.drop(1)) clip.addItem(ClipData.Item(uri))
+        send.clipData = clip
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            activity.startActivity(Intent.createChooser(send, null))
+            result.success(null)
+        } catch (e: ActivityNotFoundException) {
+            result.error("no_app", e.message, null)
+        }
     }
 
     private fun openExternally(tree: Uri, docId: String, mime: String?, result: MethodChannel.Result) {
@@ -419,4 +682,6 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         argument<String>(name) ?: throw IllegalArgumentException("Missing $name")
 
     private fun MethodCall.tree(): Uri = Uri.parse(str("treeUri"))
+
+    private class OpenPdf(val uri: Uri, val descriptor: ParcelFileDescriptor, val renderer: PdfRenderer)
 }

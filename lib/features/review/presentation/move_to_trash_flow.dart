@@ -11,8 +11,9 @@ import '../../settings/presentation/settings_controller.dart';
 import '../../trash/presentation/trash_controller.dart';
 
 /// Confirms, moves [files] to the trash with progress, then offers to free
-/// the space right away. [context] and [ref] belong to the review screen.
-Future<void> moveToTrashFlow(
+/// the space right away. [context] and [ref] belong to the screen the files
+/// are shown on. Returns the [MediaFile.key]s of the files that were moved.
+Future<Set<String>> moveToTrashFlow(
   BuildContext context,
   WidgetRef ref,
   List<MediaFile> files,
@@ -46,7 +47,7 @@ Future<void> moveToTrashFlow(
       ],
     ),
   );
-  if (confirmed != true || !context.mounted) return;
+  if (confirmed != true || !context.mounted) return const {};
 
   final progress = ValueNotifier<int>(0);
   unawaited(
@@ -83,10 +84,11 @@ Future<void> moveToTrashFlow(
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.moveFailed(result.failed.length))),
     );
-    return;
+    return const {};
   }
 
-  if (!context.mounted) return;
+  final moved = {for (final entry in result.done) entry.originalKey};
+  if (!context.mounted) return moved;
   final movedBytes = formatBytes(result.bytes, locale);
   final deleteNow = await showDialog<bool>(
     context: context,
@@ -118,10 +120,11 @@ Future<void> moveToTrashFlow(
       ],
     ),
   );
-  if (deleteNow != true) return;
+  if (deleteNow != true) return moved;
 
   final deleted = await trash.deleteForever(result.done);
   messenger.showSnackBar(
     SnackBar(content: Text(l10n.freed(formatBytes(deleted.bytes, locale)))),
   );
+  return moved;
 }

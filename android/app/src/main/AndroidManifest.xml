@@ -1,4 +1,14 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The video player library asks for these for streaming and background
+         playback. This app only plays files already on the phone, in the
+         foreground, so it keeps the promise of asking for no permissions. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.WAKE_LOCK"
+        tools:node="remove" />
     <application
         android:label="Chat Media Cleaner"
         android:name="${applicationName}"

@@ -142,6 +142,32 @@ void main() {
       );
     });
 
+    test('takes any folder as it is when asked to', () async {
+      storage
+        ..addFile('photo.jpg', rootId: 'primary:DCIM/Camera')
+        ..grant('tree:dcim', 'primary:DCIM/Camera');
+      final sources = await SourceLocator.resolve(
+        storage,
+        const PickedFolder(
+          treeUri: 'tree:dcim',
+          treeDocId: 'primary:DCIM/Camera',
+        ),
+        acceptAny: true,
+      );
+      expect(sources.single.app, ChatApp.other);
+      expect(sources.single.rootId, 'primary:DCIM/Camera');
+      expect(sources.single.folderName, 'Camera');
+    });
+
+    test('still recognises WhatsApp when any folder is allowed', () async {
+      final sources = await SourceLocator.resolve(
+        storage,
+        const PickedFolder(treeUri: waTree, treeDocId: waMediaId),
+        acceptAny: true,
+      );
+      expect(sources.single.app, ChatApp.whatsapp);
+    });
+
     test('rejects a known parent whose Media folder is missing', () async {
       final empty = FakeMediaStorage()
         ..grant('tree:wab', 'primary:Android/media/com.whatsapp.w4b');

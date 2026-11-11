@@ -151,7 +151,7 @@ abstract class AppLocalizations {
   /// No description provided for @promiseOnlyFolder.
   ///
   /// In en, this message translates to:
-  /// **'Only the folder you choose. Nothing else on your phone.'**
+  /// **'Only the folders you choose. Nothing else on your phone.'**
   String get promiseOnlyFolder;
 
   /// No description provided for @promiseOffline.
@@ -223,7 +223,7 @@ abstract class AppLocalizations {
   /// No description provided for @folderNotChatMedia.
   ///
   /// In en, this message translates to:
-  /// **'That folder doesn\'t contain WhatsApp media. Choose the Media folder inside WhatsApp.'**
+  /// **'That folder doesn\'t contain WhatsApp media. Choose the Media folder inside WhatsApp, or use Choose another folder.'**
   String get folderNotChatMedia;
 
   /// No description provided for @folderPickFailed.
@@ -439,7 +439,7 @@ abstract class AppLocalizations {
   /// No description provided for @reviewHint.
   ///
   /// In en, this message translates to:
-  /// **'Tap to select. Touch and hold to preview.'**
+  /// **'Tap to select. Touch and hold to open.'**
   String get reviewHint;
 
   /// No description provided for @reviewEmpty.
@@ -819,6 +819,534 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =0{Trash} =1{Trash, 1 file} other{Trash, {count} files}}'**
   String trashTooltip(int count);
+
+  /// No description provided for @tabClean.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up'**
+  String get tabClean;
+
+  /// No description provided for @tabFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get tabFiles;
+
+  /// No description provided for @filesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get filesTitle;
+
+  /// No description provided for @filesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the folders you chose, open anything right here, and share, rename or delete files.'**
+  String get filesIntro;
+
+  /// No description provided for @chooseOtherFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another folder'**
+  String get chooseOtherFolder;
+
+  /// No description provided for @accessOtherHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Other folders work too, for example Telegram, Download or Camera: tap Choose another folder and pick one.'**
+  String get accessOtherHint;
+
+  /// No description provided for @folderStats.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file} other{{formatted} files}} · {size}'**
+  String folderStats(int count, String formatted, String size);
+
+  /// No description provided for @folderEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder is empty'**
+  String get folderEmpty;
+
+  /// No description provided for @folderLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this folder. It may have been moved or deleted.'**
+  String get folderLoadFailed;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search in this folder'**
+  String get searchHint;
+
+  /// No description provided for @searchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTooltip;
+
+  /// No description provided for @searchClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close search'**
+  String get searchClose;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here matches \"{query}\".'**
+  String searchNoResults(String query);
+
+  /// No description provided for @viewAsGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as grid'**
+  String get viewAsGrid;
+
+  /// No description provided for @viewAsList.
+  ///
+  /// In en, this message translates to:
+  /// **'Show as list'**
+  String get viewAsList;
+
+  /// No description provided for @sortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get sortName;
+
+  /// No description provided for @sortSmallest.
+  ///
+  /// In en, this message translates to:
+  /// **'Smallest first'**
+  String get sortSmallest;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 selected} other{{formatted} selected}}'**
+  String selectedCount(int count, String formatted);
+
+  /// No description provided for @cancelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get cancelSelection;
+
+  /// No description provided for @fileMenuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions for {name}'**
+  String fileMenuTooltip(String name);
+
+  /// No description provided for @actionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get actionOpen;
+
+  /// No description provided for @actionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get actionShare;
+
+  /// No description provided for @actionRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get actionRename;
+
+  /// No description provided for @actionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get actionDetails;
+
+  /// No description provided for @actionMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get actionMore;
+
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get actionSave;
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
+  /// No description provided for @shareTooMany.
+  ///
+  /// In en, this message translates to:
+  /// **'Share up to {max} files at a time.'**
+  String shareTooMany(int max);
+
+  /// No description provided for @renameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename file'**
+  String get renameTitle;
+
+  /// No description provided for @renameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'File name'**
+  String get renameLabel;
+
+  /// No description provided for @renameWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'A chat app may no longer show a file after it is renamed.'**
+  String get renameWarning;
+
+  /// No description provided for @renameEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a name.'**
+  String get renameEmpty;
+
+  /// No description provided for @renameBadCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'A name can\'t contain / \\ : * ? \" < > |'**
+  String get renameBadCharacter;
+
+  /// No description provided for @renameReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'That name can\'t be used.'**
+  String get renameReserved;
+
+  /// No description provided for @renameTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'That name is too long.'**
+  String get renameTooLong;
+
+  /// No description provided for @renameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder already has a file with that name.'**
+  String get renameTaken;
+
+  /// No description provided for @renameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t rename the file.'**
+  String get renameFailed;
+
+  /// No description provided for @renamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed to {name}.'**
+  String renamed(String name);
+
+  /// No description provided for @detailName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get detailName;
+
+  /// No description provided for @detailDimensions.
+  ///
+  /// In en, this message translates to:
+  /// **'Dimensions'**
+  String get detailDimensions;
+
+  /// No description provided for @detailDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get detailDuration;
+
+  /// No description provided for @dimensions.
+  ///
+  /// In en, this message translates to:
+  /// **'{width} × {height}'**
+  String dimensions(int width, int height);
+
+  /// No description provided for @viewerPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{index} of {total}'**
+  String viewerPosition(int index, int total);
+
+  /// No description provided for @viewerNoPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'This kind of file can\'t be shown here.'**
+  String get viewerNoPreview;
+
+  /// No description provided for @viewerCantPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'This file can\'t be played here.'**
+  String get viewerCantPlay;
+
+  /// No description provided for @viewerCantShow.
+  ///
+  /// In en, this message translates to:
+  /// **'This file couldn\'t be opened. It may be damaged.'**
+  String get viewerCantShow;
+
+  /// No description provided for @viewerPdfLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'This PDF needs a password. Open it with another app.'**
+  String get viewerPdfLocked;
+
+  /// No description provided for @viewerTextTruncated.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the beginning of this file is shown.'**
+  String get viewerTextTruncated;
+
+  /// No description provided for @pdfPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String pdfPage(int page, int total);
+
+  /// No description provided for @playerPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get playerPlay;
+
+  /// No description provided for @playerPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get playerPause;
+
+  /// No description provided for @playerReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play again'**
+  String get playerReplay;
+
+  /// No description provided for @playerMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get playerMute;
+
+  /// No description provided for @playerUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get playerUnmute;
+
+  /// No description provided for @playerSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback speed'**
+  String get playerSpeed;
+
+  /// No description provided for @playerSpeedNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get playerSpeedNormal;
+
+  /// No description provided for @playerLoopOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat is on'**
+  String get playerLoopOn;
+
+  /// No description provided for @playerLoopOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat is off'**
+  String get playerLoopOff;
+
+  /// No description provided for @playerFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get playerFullscreen;
+
+  /// No description provided for @playerExitFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get playerExitFullscreen;
+
+  /// No description provided for @playerBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back {seconds} seconds'**
+  String playerBack(int seconds);
+
+  /// No description provided for @playerForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward {seconds} seconds'**
+  String playerForward(int seconds);
+
+  /// No description provided for @playerSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String playerSkipped(int seconds);
+
+  /// No description provided for @playerPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get playerPosition;
+
+  /// No description provided for @openHint.
+  ///
+  /// In en, this message translates to:
+  /// **'open'**
+  String get openHint;
+
+  /// No description provided for @browseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to open. Touch and hold to select.'**
+  String get browseHint;
+
+  /// No description provided for @viewerToggleControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide the controls'**
+  String get viewerToggleControls;
+
+  /// No description provided for @playerLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock the controls'**
+  String get playerLock;
+
+  /// No description provided for @playerUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get playerUnlock;
+
+  /// No description provided for @playerLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get playerLocked;
+
+  /// No description provided for @playerFitFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit to screen'**
+  String get playerFitFit;
+
+  /// No description provided for @playerFitCrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop to fill'**
+  String get playerFitCrop;
+
+  /// No description provided for @playerFitStretch.
+  ///
+  /// In en, this message translates to:
+  /// **'Stretch'**
+  String get playerFitStretch;
+
+  /// No description provided for @playerAspect.
+  ///
+  /// In en, this message translates to:
+  /// **'Picture size: {mode}'**
+  String playerAspect(String mode);
+
+  /// No description provided for @playerPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous file'**
+  String get playerPrevious;
+
+  /// No description provided for @playerNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next file'**
+  String get playerNext;
+
+  /// No description provided for @playerRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get playerRepeat;
+
+  /// No description provided for @playerSleepTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer'**
+  String get playerSleepTimer;
+
+  /// No description provided for @playerSleepTimerSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer · {minutes} min'**
+  String playerSleepTimerSet(int minutes);
+
+  /// No description provided for @sleepOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get sleepOff;
+
+  /// No description provided for @sleepMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes'**
+  String sleepMinutes(int minutes);
+
+  /// No description provided for @sleepIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pauses in {minutes} min'**
+  String sleepIn(int minutes);
+
+  /// No description provided for @sleepTimerOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer off'**
+  String get sleepTimerOff;
+
+  /// No description provided for @playerSaveFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this frame as a photo'**
+  String get playerSaveFrame;
+
+  /// No description provided for @frameSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {name}'**
+  String frameSaved(String name);
+
+  /// No description provided for @frameSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save this frame'**
+  String get frameSaveFailed;
+
+  /// No description provided for @resumedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Carrying on from {time}'**
+  String resumedFrom(String time);
+
+  /// No description provided for @percent.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}%'**
+  String percent(int value);
 }
 
 class _AppLocalizationsDelegate

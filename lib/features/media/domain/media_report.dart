@@ -91,11 +91,16 @@ abstract final class MediaAnalyzer {
   /// [duplicates] come from [DuplicateFinder]; sets are re-checked against
   /// [files], so files moved to the trash since drop out and a set always
   /// keeps one copy.
+  ///
+  /// Only files from [chatSourceIds] can be "old forwards": in a folder
+  /// that is not a chat app's, an old photo is more likely one you took.
+  /// Null means every source is a chat app's.
   static MediaReport analyze(
     List<MediaFile> files, {
     required AnalysisRules rules,
     required DateTime now,
     List<DuplicateSet> duplicates = const [],
+    Set<String>? chatSourceIds,
   }) {
     final bySizeDesc = [...files]..sort(_largestFirst);
 
@@ -110,8 +115,16 @@ abstract final class MediaAnalyzer {
         .toList();
 
     final cutoff = monthsBefore(now, rules.oldAfterMonths);
-    final old = files.where((f) => _isOldForward(f, rules, cutoff)).toList()
-      ..sort(_oldestFirst);
+    final old =
+        files
+            .where(
+              (f) =>
+                  (chatSourceIds == null ||
+                      chatSourceIds.contains(f.sourceId)) &&
+                  _isOldForward(f, rules, cutoff),
+            )
+            .toList()
+          ..sort(_oldestFirst);
 
     final sent = bySizeDesc.where((f) => f.isSent).toList();
 

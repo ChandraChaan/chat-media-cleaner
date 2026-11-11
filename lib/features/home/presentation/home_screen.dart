@@ -14,9 +14,9 @@ import '../../review/presentation/review_controller.dart';
 import '../../review/presentation/review_screen.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../settings/presentation/settings_controller.dart';
-import '../../settings/presentation/settings_screen.dart';
 import '../../trash/presentation/trash_controller.dart';
 import '../../trash/presentation/trash_screen.dart';
+import 'home_actions.dart';
 import 'scan_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -26,37 +26,10 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final scan = ref.watch(scanControllerProvider);
-    final trashCount = ref.watch(
-      trashControllerProvider.select((t) => t.value?.length ?? 0),
-    );
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
-        actions: [
-          IconButton(
-            key: const Key('open-trash'),
-            tooltip: l10n.trashTooltip(trashCount),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const TrashScreen()),
-            ),
-            // The tooltip already says how many files; the badge would
-            // otherwise be read out instead of the button's name.
-            icon: ExcludeSemantics(
-              child: Badge.count(
-                count: trashCount,
-                isLabelVisible: trashCount > 0,
-                child: const Icon(Icons.delete_outline),
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: l10n.settingsTitle,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
+        actions: [const TrashButton(), const SettingsButton()],
       ),
       body: SafeArea(
         child: ListView(
@@ -95,7 +68,7 @@ class _SourcesRow extends ConsumerWidget {
         for (final source in sources)
           Chip(
             avatar: const Icon(Icons.folder_outlined, size: 18),
-            label: Text(source.app.label(l10n)),
+            label: Text(source.label(l10n)),
           ),
         ActionChip(
           avatar: const Icon(Icons.add, size: 18),

@@ -35,7 +35,7 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
       case FolderAdded(:final sources):
         showMessage(
           context,
-          l10n.folderAdded(sources.map((s) => s.app.label(l10n)).join(', ')),
+          l10n.folderAdded(sources.map((s) => s.label(l10n)).join(', ')),
         );
         if (widget.pushed) Navigator.of(context).pop();
       case FolderPickCancelled():
@@ -89,6 +89,13 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
             _Promise(icon: Icons.restore, text: l10n.promiseTrash),
             const SizedBox(height: 20),
             Text(
+              l10n.accessOtherHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
               l10n.accessLegacyHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -126,6 +133,12 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
                     : () => _choose(ChatApp.whatsappBusiness),
                 icon: const Icon(Icons.storefront_outlined),
                 label: Text(l10n.chooseBusinessFolder),
+              ),
+              TextButton.icon(
+                key: const Key('choose-other'),
+                onPressed: _busy ? null : () => _choose(ChatApp.other),
+                icon: const Icon(Icons.create_new_folder_outlined),
+                label: Text(l10n.chooseOtherFolder),
               ),
             ],
           ),
