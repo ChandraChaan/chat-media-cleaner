@@ -26,6 +26,11 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final scan = ref.watch(scanControllerProvider);
+    final noSources = ref.watch(
+      settingsControllerProvider.select(
+        (s) => s.value?.sources.isEmpty ?? false,
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
@@ -38,6 +43,7 @@ class HomeScreen extends ConsumerWidget {
             const _SourcesRow(),
             const SizedBox(height: 12),
             switch (scan) {
+              _ when noSources => const _NoChatFolders(),
               ScanIdle() => const _ScanPrompt(),
               ScanRunning(:final progress) => _ScanProgressCard(progress),
               ScanFailed(:final reason) => _ScanFailedCard(reason),
@@ -80,6 +86,46 @@ class _SourcesRow extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shown when no chat media folder was found or chosen yet (the app was
+/// opened as a file manager).
+class _NoChatFolders extends ConsumerWidget {
+  const _NoChatFolders();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Card.filled(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.noChatFoldersTitle, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(l10n.noChatFoldersBody, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              key: const Key('find-chat-folders'),
+              onPressed: () async {
+                final result = await ref
+                    .read(settingsControllerProvider.notifier)
+                    .addDetectedFolders();
+                if (!context.mounted) return;
+                if (result is! FolderAdded || result.sources.isEmpty) {
+                  showMessage(context, l10n.noChatFoldersFound);
+                }
+              },
+              icon: const Icon(Icons.search),
+              label: Text(l10n.findChatFolders),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

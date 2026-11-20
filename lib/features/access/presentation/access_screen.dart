@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/widgets.dart';
 import '../../../core/l10n.dart';
 import '../../../core/media_labels.dart';
+import '../../browse/presentation/browse_home.dart';
 import '../../media/domain/media_source.dart';
 import '../../settings/presentation/settings_controller.dart';
+import 'storage_access_controller.dart';
 
 /// Explains why the app needs a folder and opens the system folder picker.
 ///
@@ -79,6 +81,10 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
             const SizedBox(height: 12),
             Text(l10n.accessBody, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 20),
+            const _AllFilesOption(),
+            const SizedBox(height: 20),
+            Text(l10n.accessFolderOption, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
             _Steps(
               steps: [l10n.accessStep1, l10n.accessStep2, l10n.accessStep3],
             ),
@@ -142,6 +148,48 @@ class _AccessScreenState extends ConsumerState<AccessScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The other way in: all-files access, for using the app as a file
+/// manager. The chat apps' folders are then found without the picker.
+class _AllFilesOption extends ConsumerWidget {
+  const _AllFilesOption();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final granted = ref.watch(allFilesAccessControllerProvider).value ?? false;
+    return Card.outlined(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.allFilesTitle, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(l10n.allFilesAccessBody, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 12),
+            if (granted)
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l10n.allFilesOn)),
+                ],
+              )
+            else
+              FilledButton.tonalIcon(
+                key: const Key('choose-all-files'),
+                onPressed: () => requestAllFiles(context, ref),
+                icon: const Icon(Icons.folder_copy_outlined),
+                label: Text(l10n.allowAllFiles),
+              ),
+          ],
         ),
       ),
     );

@@ -5,6 +5,8 @@ import '../../../app/widgets.dart';
 import '../../../core/l10n.dart';
 import '../../../core/media_labels.dart';
 import '../../access/presentation/access_screen.dart';
+import '../../access/presentation/storage_access_controller.dart';
+import '../../browse/presentation/browse_home.dart';
 import '../../media/domain/media_source.dart';
 import '../../trash/presentation/trash_controller.dart';
 import '../domain/app_settings.dart';
@@ -51,6 +53,7 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: controller.setOldAfterMonths,
             ),
             SectionTitle(l10n.settingsFolders),
+            const _AllFilesTile(),
             for (final source in value.sources)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -164,6 +167,27 @@ class _ChoiceTile<T extends Object> extends StatelessWidget {
             DropdownMenuItem(value: c, child: Text(label(c))),
         ],
       ),
+    );
+  }
+}
+
+/// Whether the app has all-files access, and a way to ask for it.
+class _AllFilesTile extends ConsumerWidget {
+  const _AllFilesTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final granted = ref.watch(allFilesAccessControllerProvider).value ?? false;
+    return ListTile(
+      key: const Key('settings-all-files'),
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(granted ? Icons.folder_copy : Icons.folder_copy_outlined),
+      title: Text(l10n.allFilesSetting),
+      subtitle: Text(
+        granted ? l10n.allFilesSettingOn : l10n.allFilesSettingOff,
+      ),
+      onTap: granted ? null : () => requestAllFiles(context, ref),
     );
   }
 }

@@ -4,11 +4,15 @@ import 'package:flutter/services.dart';
 
 import '../domain/media_storage.dart';
 
-/// [MediaStorage], [MediaViewer], [FolderAccess] and [ScreenControl] backed
-/// by the Android
-/// Storage Access Framework code in `StorageChannel.kt`.
+/// [MediaStorage], [MediaViewer], [FolderAccess], [AllFilesAccess] and
+/// [ScreenControl] backed by the Android code in `StorageChannel.kt`.
 final class PlatformMediaStorage
-    implements MediaStorage, MediaViewer, FolderAccess, ScreenControl {
+    implements
+        MediaStorage,
+        MediaViewer,
+        FolderAccess,
+        AllFilesAccess,
+        ScreenControl {
   PlatformMediaStorage([this._channel = const MethodChannel(channelName)]);
 
   static const channelName = 'dev.chandra.chat_media_cleaner/storage';
@@ -104,6 +108,132 @@ final class PlatformMediaStorage
     _thumbnails.removeWhere((key, _) => key.startsWith('$treeUri|$fileId|'));
     return map!['id']! as String;
   }
+
+  @override
+  Future<StoredItem> createFolder(
+    String treeUri, {
+    required String parentId,
+    required String name,
+  }) async => _item(
+    await _call<Map<Object?, Object?>>('createFolder', {
+      'treeUri': treeUri,
+      'parentId': parentId,
+      'name': name,
+    }),
+  );
+
+  @override
+  Future<StoredItem> copy(
+    String treeUri, {
+    required String id,
+    required String targetTreeUri,
+    required String targetParentId,
+  }) async => _item(
+    await _call<Map<Object?, Object?>>('copyItem', {
+      'treeUri': treeUri,
+      'docId': id,
+      'targetTreeUri': targetTreeUri,
+      'targetParentId': targetParentId,
+    }),
+  );
+
+  @override
+  Future<StoredItem> move(
+    String treeUri, {
+    required String id,
+    required String parentId,
+    required String targetTreeUri,
+    required String targetParentId,
+  }) async {
+    final item = _item(
+      await _call<Map<Object?, Object?>>('moveItem', {
+        'treeUri': treeUri,
+        'docId': id,
+        'parentId': parentId,
+        'targetTreeUri': targetTreeUri,
+        'targetParentId': targetParentId,
+      }),
+    );
+    _thumbnails.removeWhere((key, _) => key.startsWith('$treeUri|$id|'));
+    return item;
+  }
+
+  @override
+  Future<void> deletePermanently(String treeUri, String id) async {
+    await _call<void>('deleteItem', {'treeUri': treeUri, 'docId': id});
+    _thumbnails.removeWhere((key, _) => key.startsWith('$treeUri|$id|'));
+  }
+
+  @override
+  Future<FolderSize> folderSize(String treeUri, String id) async {
+    final map = await _call<Map<Object?, Object?>>('folderSize', {
+      'treeUri': treeUri,
+      'docId': id,
+    });
+    return FolderSize(
+      bytes: (map?['bytes'] as int?) ?? 0,
+      files: (map?['files'] as int?) ?? 0,
+      folders: (map?['folders'] as int?) ?? 0,
+    );
+  }
+
+  @override
+  Future<StoredItem> zip(
+    String treeUri, {
+    required List<String> ids,
+    required String parentId,
+    required String name,
+  }) async => _item(
+    await _call<Map<Object?, Object?>>('zipItems', {
+      'treeUri': treeUri,
+      'docIds': ids,
+      'parentId': parentId,
+      'name': name,
+    }),
+  );
+
+  @override
+  Future<StoredItem> unzip(
+    String treeUri, {
+    required String id,
+    required String parentId,
+  }) async => _item(
+    await _call<Map<Object?, Object?>>('unzip', {
+      'treeUri': treeUri,
+      'docId': id,
+      'parentId': parentId,
+    }),
+  );
+
+  @override
+  Future<bool> hasAllFilesAccess() async {
+    final map = await _call<Map<Object?, Object?>>('allFilesAccess');
+    return (map?['granted'] as bool?) ?? false;
+  }
+
+  @override
+  Future<bool> requestAllFilesAccess() async =>
+      (await _call<bool>('requestAllFilesAccess')) ?? false;
+
+  @override
+  Future<List<StorageVolume>> storageVolumes() async {
+    final rows = await _call<List<Object?>>('storageVolumes');
+    return [
+      for (final row in rows ?? const <Object?>[])
+        if (row case final Map<Object?, Object?> map)
+          StorageVolume(
+            path: map['path']! as String,
+            label: (map['label'] as String?) ?? '',
+            isPrimary: (map['primary'] as bool?) ?? false,
+            isRemovable: (map['removable'] as bool?) ?? false,
+            totalBytes: (map['totalBytes'] as int?) ?? 0,
+            freeBytes: (map['freeBytes'] as int?) ?? 0,
+          ),
+    ];
+  }
+
+  static StoredItem _item(Map<Object?, Object?>? map) =>
+      StoredItem(id: map!['id']! as String, name: map['name']! as String);
 
   @override
   Future<Uint8List?> thumbnail(
@@ -311,6 +441,7 @@ final class PlatformMediaStorage
     'exists' => StorageError.nameTaken,
     'locked' => StorageError.locked,
     'unreadable' => StorageError.unreadable,
+    'invalid' => StorageError.invalidTarget,
     _ => StorageError.failed,
   };
 }

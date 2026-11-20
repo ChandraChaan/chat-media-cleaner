@@ -4,6 +4,7 @@ import '../features/browse/domain/browse_entry.dart';
 import '../features/media/domain/media_report.dart';
 import '../features/media/domain/media_source.dart';
 import '../features/media/domain/media_type.dart';
+import '../features/storage/domain/file_category.dart';
 import '../features/viewer/domain/view_kind.dart';
 import '../l10n/app_localizations.dart';
 
@@ -71,10 +72,33 @@ extension ChatAppLabels on ChatApp {
 extension MediaSourceLabels on MediaSource {
   /// The app's name, or the folder's own name for any other folder.
   String label(AppLocalizations l10n) {
+    if (displayName case final name? when name.isNotEmpty) return name;
     if (app != ChatApp.other) return app.label(l10n);
     final name = folderName;
     return name.isEmpty ? l10n.appOtherFolder : name;
   }
+}
+
+extension FileCategoryLabels on FileCategory {
+  String label(AppLocalizations l10n) => switch (this) {
+    FileCategory.images => l10n.categoryImages,
+    FileCategory.videos => l10n.categoryVideos,
+    FileCategory.audio => l10n.categoryAudio,
+    FileCategory.documents => l10n.categoryDocuments,
+    FileCategory.archives => l10n.categoryArchives,
+    FileCategory.apps => l10n.categoryApps,
+    FileCategory.other => l10n.categoryOther,
+  };
+
+  IconData get icon => switch (this) {
+    FileCategory.images => Icons.image_outlined,
+    FileCategory.videos => Icons.videocam_outlined,
+    FileCategory.audio => Icons.music_note_outlined,
+    FileCategory.documents => Icons.description_outlined,
+    FileCategory.archives => Icons.folder_zip_outlined,
+    FileCategory.apps => Icons.android,
+    FileCategory.other => Icons.insert_drive_file_outlined,
+  };
 }
 
 extension BrowseSortLabels on BrowseSort {

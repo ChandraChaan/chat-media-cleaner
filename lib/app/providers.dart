@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/media/data/platform_media_storage.dart';
 import '../features/media/domain/media_storage.dart';
+import '../features/places/data/prefs_places_store.dart';
+import '../features/places/domain/places.dart';
 import '../features/settings/data/prefs_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
 import '../features/trash/data/file_trash_index_store.dart';
@@ -25,6 +27,12 @@ final mediaViewerProvider = Provider<MediaViewer>(
 final folderAccessProvider = Provider<FolderAccess>(
   (ref) => ref.watch(platformStorageProvider),
 );
+
+final allFilesAccessProvider = Provider<AllFilesAccess>(
+  (ref) => ref.watch(platformStorageProvider),
+);
+
+final placesStoreProvider = Provider<PlacesStore>((ref) => PrefsPlacesStore());
 
 final screenControlProvider = Provider<ScreenControl>(
   (ref) => ref.watch(platformStorageProvider),

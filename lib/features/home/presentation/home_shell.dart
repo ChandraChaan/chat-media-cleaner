@@ -1,20 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n.dart';
+import '../../access/presentation/storage_access_controller.dart';
 import '../../browse/presentation/browse_home.dart';
 import 'home_screen.dart';
 
 /// The two halves of the app behind a bottom bar: cleaning up, and
 /// browsing files.
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _tab = 0;
+
+  /// All-files access can be given or taken away in system settings while
+  /// the app is in the background; check again when it comes back.
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onResume: () =>
+        ref.read(allFilesAccessControllerProvider.notifier).refresh(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

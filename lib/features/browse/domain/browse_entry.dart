@@ -3,6 +3,7 @@ import '../../media/domain/media_scanner.dart';
 import '../../media/domain/media_source.dart';
 import '../../media/domain/media_storage.dart';
 import '../../media/domain/media_type.dart';
+import '../../storage/domain/file_category.dart';
 
 /// A folder being looked at: [dirId] inside [source], [path] segments below
 /// the source's root (empty at the root itself).
@@ -30,6 +31,25 @@ final class BrowseLocation {
     path: [...path, folder.name],
   );
 
+  /// The folder [file] is in, when [file] was found below [source]'s root
+  /// (by a search or a scan).
+  static BrowseLocation containing(MediaSource source, MediaFile file) {
+    final folder = file.folder;
+    return BrowseLocation(
+      source: source,
+      dirId: file.parentId,
+      path: folder.isEmpty ? const [] : folder.split('/'),
+    );
+  }
+
+  /// [folder] itself, when it was found below [source]'s root.
+  static BrowseLocation ofFolder(MediaSource source, MediaFile folder) =>
+      BrowseLocation(
+        source: source,
+        dirId: folder.id,
+        path: folder.relativePath.split('/'),
+      );
+
   @override
   bool operator ==(Object other) =>
       other is BrowseLocation && other.source == source && other.dirId == dirId;
@@ -51,6 +71,20 @@ final class BrowseFolder {
 
   /// Last modified time, in UTC.
   final DateTime modified;
+
+  /// The folder as an item that can be selected, copied, moved or
+  /// trashed like a file. Its size is unknown (0) until it is measured.
+  MediaFile asItem(BrowseLocation location) => MediaFile(
+    id: id,
+    sourceId: location.source.id,
+    parentId: location.dirId,
+    name: name,
+    relativePath: location.isRoot ? name : '${location.relativePath}/$name',
+    size: 0,
+    modified: modified,
+    type: MediaType.other,
+    mimeType: MediaFile.folderMimeType,
+  );
 }
 
 /// What is directly inside a folder.
@@ -113,14 +147,21 @@ enum BrowseSort { name, newest, oldest, largest, smallest }
 /// Ordering and filtering of a listing. Folders always come first and are
 /// never ordered by size, which they do not have.
 abstract final class BrowseOrder {
+  /// [listing] sorted by [sort], keeping names that contain [query]. With
+  /// [category] only files of that kind are kept (folders stay, so you can
+  /// go on looking). Names starting with a dot are left out unless
+  /// [showHidden].
   static FolderListing apply(
     FolderListing listing, {
     required BrowseSort sort,
     String query = '',
+    FileCategory? category,
+    bool showHidden = true,
   }) {
     final needle = query.trim().toLowerCase();
     bool matches(String name) =>
-        needle.isEmpty || name.toLowerCase().contains(needle);
+        (showHidden || !name.startsWith('.')) &&
+        (needle.isEmpty || name.toLowerCase().contains(needle));
 
     final folders = listing.folders.where((f) => matches(f.name)).toList()
       ..sort(switch (sort) {
@@ -138,30 +179,39 @@ abstract final class BrowseOrder {
         BrowseSort.largest ||
         BrowseSort.smallest => (a, b) => _byName(a.name, b.name),
       });
-    final files = listing.files.where((f) => matches(f.name)).toList()
-      ..sort(switch (sort) {
-        BrowseSort.name => (a, b) => _byName(a.name, b.name),
-        BrowseSort.newest => (a, b) => _then(
-          b.modified.compareTo(a.modified),
-          a.name,
-          b.name,
-        ),
-        BrowseSort.oldest => (a, b) => _then(
-          a.modified.compareTo(b.modified),
-          a.name,
-          b.name,
-        ),
-        BrowseSort.largest => (a, b) => _then(
-          b.size.compareTo(a.size),
-          a.name,
-          b.name,
-        ),
-        BrowseSort.smallest => (a, b) => _then(
-          a.size.compareTo(b.size),
-          a.name,
-          b.name,
-        ),
-      });
+    final files =
+        listing.files
+            .where(
+              (f) =>
+                  matches(f.name) &&
+                  (category == null ||
+                      FileCategories.of(f.name, mimeType: f.mimeType) ==
+                          category),
+            )
+            .toList()
+          ..sort(switch (sort) {
+            BrowseSort.name => (a, b) => _byName(a.name, b.name),
+            BrowseSort.newest => (a, b) => _then(
+              b.modified.compareTo(a.modified),
+              a.name,
+              b.name,
+            ),
+            BrowseSort.oldest => (a, b) => _then(
+              a.modified.compareTo(b.modified),
+              a.name,
+              b.name,
+            ),
+            BrowseSort.largest => (a, b) => _then(
+              b.size.compareTo(a.size),
+              a.name,
+              b.name,
+            ),
+            BrowseSort.smallest => (a, b) => _then(
+              a.size.compareTo(b.size),
+              a.name,
+              b.name,
+            ),
+          });
     return FolderListing(folders: folders, files: files);
   }
 

@@ -248,7 +248,7 @@ class _TrashTile extends ConsumerWidget {
                     ),
                     type: entry.type,
                   )
-                : Icon(entry.type.icon),
+                : Icon(entry.isFolder ? Icons.folder : entry.type.icon),
           ),
         ),
       ),

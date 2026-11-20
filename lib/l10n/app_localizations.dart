@@ -151,7 +151,7 @@ abstract class AppLocalizations {
   /// No description provided for @promiseOnlyFolder.
   ///
   /// In en, this message translates to:
-  /// **'Only the folders you choose. Nothing else on your phone.'**
+  /// **'A folder you choose is the only one the app can open, unless you allow all files.'**
   String get promiseOnlyFolder;
 
   /// No description provided for @promiseOffline.
@@ -841,7 +841,7 @@ abstract class AppLocalizations {
   /// No description provided for @filesIntro.
   ///
   /// In en, this message translates to:
-  /// **'Browse the folders you chose, open anything right here, and share, rename or delete files.'**
+  /// **'Browse the folders you chose, open anything right here, and copy, move, rename, compress or delete files.'**
   String get filesIntro;
 
   /// No description provided for @chooseOtherFolder.
@@ -1347,6 +1347,569 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value}%'**
   String percent(int value);
+
+  /// No description provided for @accessFolderOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Or choose one folder'**
+  String get accessFolderOption;
+
+  /// No description provided for @actionCompress.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress'**
+  String get actionCompress;
+
+  /// No description provided for @actionCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get actionCopy;
+
+  /// No description provided for @actionCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get actionCreate;
+
+  /// No description provided for @actionExtract.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract here'**
+  String get actionExtract;
+
+  /// No description provided for @actionMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get actionMove;
+
+  /// No description provided for @actionUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get actionUndo;
+
+  /// No description provided for @addFavourite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favourites'**
+  String get addFavourite;
+
+  /// No description provided for @removeFavourite.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favourites'**
+  String get removeFavourite;
+
+  /// No description provided for @allFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse all your files'**
+  String get allFilesTitle;
+
+  /// No description provided for @allFilesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access to all files to use Chat Media Cleaner as a file manager: browse your whole phone and memory card, copy, move, compress and clean up anything. Files stay on your phone; the app has no internet permission.'**
+  String get allFilesBody;
+
+  /// No description provided for @allFilesAccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the app as a full file manager for your phone and memory card. Your chat apps\' media folders are then found for you, with no folder picking. Nothing leaves your phone.'**
+  String get allFilesAccessBody;
+
+  /// No description provided for @allFilesWithout.
+  ///
+  /// In en, this message translates to:
+  /// **'Without it, the app works in the folders you choose.'**
+  String get allFilesWithout;
+
+  /// No description provided for @allowAllFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access to all files'**
+  String get allowAllFiles;
+
+  /// No description provided for @allFilesOn.
+  ///
+  /// In en, this message translates to:
+  /// **'All files access is on.'**
+  String get allFilesOn;
+
+  /// No description provided for @allFilesDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'All files access is off. You can still work in the folders you choose.'**
+  String get allFilesDeclined;
+
+  /// No description provided for @allFilesGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'All files access is on. Your storage is in the Files tab.'**
+  String get allFilesGranted;
+
+  /// No description provided for @allFilesSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'All files access'**
+  String get allFilesSetting;
+
+  /// No description provided for @allFilesSettingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On. To turn it off, use Android\'s settings for this app.'**
+  String get allFilesSettingOn;
+
+  /// No description provided for @allFilesSettingOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off. Tap to allow it and browse your whole phone.'**
+  String get allFilesSettingOff;
+
+  /// No description provided for @archiveDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get archiveDefaultName;
+
+  /// No description provided for @categoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kinds of files'**
+  String get categoriesTitle;
+
+  /// No description provided for @categoryImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get categoryImages;
+
+  /// No description provided for @categoryVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get categoryVideos;
+
+  /// No description provided for @categoryAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get categoryAudio;
+
+  /// No description provided for @categoryDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get categoryDocuments;
+
+  /// No description provided for @categoryArchives.
+  ///
+  /// In en, this message translates to:
+  /// **'Archives'**
+  String get categoryArchives;
+
+  /// No description provided for @categoryApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps (APK)'**
+  String get categoryApps;
+
+  /// No description provided for @categoryOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get categoryOther;
+
+  /// No description provided for @chosenFoldersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Folders you chose'**
+  String get chosenFoldersTitle;
+
+  /// No description provided for @clearRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear recent files'**
+  String get clearRecent;
+
+  /// No description provided for @clipboardCopyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item to copy.} other{{count} items to copy.}} Open a folder and tap Paste here.'**
+  String clipboardCopyHint(int count);
+
+  /// No description provided for @clipboardMoveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item to move.} other{{count} items to move.}} Open a folder and tap Move here.'**
+  String clipboardMoveHint(int count);
+
+  /// No description provided for @clipboardCopyCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item to copy} other{{formatted} items to copy}}'**
+  String clipboardCopyCount(int count, String formatted);
+
+  /// No description provided for @clipboardMoveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item to move} other{{formatted} items to move}}'**
+  String clipboardMoveCount(int count, String formatted);
+
+  /// No description provided for @compressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Compress 1 item} other{Compress {count} items}}'**
+  String compressTitle(int count);
+
+  /// No description provided for @compressed.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {name}.'**
+  String compressed(String name);
+
+  /// No description provided for @detailContains.
+  ///
+  /// In en, this message translates to:
+  /// **'Contains'**
+  String get detailContains;
+
+  /// No description provided for @detailTypeFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder'**
+  String get detailTypeFolder;
+
+  /// No description provided for @duplicateFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate files'**
+  String get duplicateFilesTitle;
+
+  /// No description provided for @duplicatesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No extra copies} =1{1 extra copy · {size}} other{{formatted} extra copies · {size}}}'**
+  String duplicatesSummary(int count, String formatted, String size);
+
+  /// No description provided for @extracting.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracting…'**
+  String get extracting;
+
+  /// No description provided for @extracted.
+  ///
+  /// In en, this message translates to:
+  /// **'Extracted into {name}.'**
+  String extracted(String name);
+
+  /// No description provided for @extractFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t extract that archive. It may be damaged or protected by a password.'**
+  String get extractFailed;
+
+  /// No description provided for @favouriteAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name} to favourites.'**
+  String favouriteAdded(String name);
+
+  /// No description provided for @favouriteRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {name} from favourites.'**
+  String favouriteRemoved(String name);
+
+  /// No description provided for @favouritesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Favourites'**
+  String get favouritesTitle;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @findChatFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Find chat folders'**
+  String get findChatFolders;
+
+  /// No description provided for @folderContents.
+  ///
+  /// In en, this message translates to:
+  /// **'{files, plural, =1{1 file} other{{filesFormatted} files}}, {folders, plural, =1{1 folder} other{{foldersFormatted} folders}}'**
+  String folderContents(
+    int files,
+    String filesFormatted,
+    int folders,
+    String foldersFormatted,
+  );
+
+  /// No description provided for @folderCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {name}.'**
+  String folderCreated(String name);
+
+  /// No description provided for @folderSizeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t be measured'**
+  String get folderSizeUnknown;
+
+  /// No description provided for @internalStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal storage'**
+  String get internalStorage;
+
+  /// No description provided for @largeFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Large files'**
+  String get largeFilesTitle;
+
+  /// No description provided for @listEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here.'**
+  String get listEmpty;
+
+  /// No description provided for @listSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file} other{{formatted} files}} · {size}'**
+  String listSummary(int count, String formatted, String size);
+
+  /// No description provided for @measuring.
+  ///
+  /// In en, this message translates to:
+  /// **'Measuring…'**
+  String get measuring;
+
+  /// No description provided for @moreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreActions;
+
+  /// No description provided for @pasteHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste here'**
+  String get pasteHere;
+
+  /// No description provided for @moveHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Move here'**
+  String get moveHere;
+
+  /// No description provided for @movedToTrashUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Moved 1 item to the trash.} other{Moved {formatted} items to the trash.}}'**
+  String movedToTrashUndo(int count, String formatted);
+
+  /// No description provided for @nameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// No description provided for @newFolderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get newFolderTitle;
+
+  /// No description provided for @newFolderDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get newFolderDefaultName;
+
+  /// No description provided for @noChatFoldersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No chat folders yet'**
+  String get noChatFoldersTitle;
+
+  /// No description provided for @noChatFoldersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Media Cleaner finds large, duplicate and old WhatsApp media. Find the folders on your phone, or add one with the button above.'**
+  String get noChatFoldersBody;
+
+  /// No description provided for @noChatFoldersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No WhatsApp media folders were found. Add a folder with Add folder.'**
+  String get noChatFoldersFound;
+
+  /// No description provided for @noDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'No duplicate files found.'**
+  String get noDuplicates;
+
+  /// No description provided for @pasteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item couldn\'t be done.} other{{count} items couldn\'t be done.}}'**
+  String pasteFailed(int count);
+
+  /// No description provided for @pasteIntoItself.
+  ///
+  /// In en, this message translates to:
+  /// **'A folder can\'t go inside itself. Open another folder.'**
+  String get pasteIntoItself;
+
+  /// No description provided for @pasteProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total}'**
+  String pasteProgress(int done, int total);
+
+  /// No description provided for @pastedCopies.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Copied 1 item.} other{Copied {formatted} items.}}'**
+  String pastedCopies(int count, String formatted);
+
+  /// No description provided for @pastedMoves.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Moved 1 item.} other{Moved {formatted} items.}}'**
+  String pastedMoves(int count, String formatted);
+
+  /// No description provided for @placeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available: the app can\'t reach this folder any more.'**
+  String get placeUnavailable;
+
+  /// No description provided for @recentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent files'**
+  String get recentTitle;
+
+  /// No description provided for @recentEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Files you open in the app show up here.'**
+  String get recentEmpty;
+
+  /// No description provided for @searchDeepHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search here and in sub-folders'**
+  String get searchDeepHint;
+
+  /// No description provided for @searchSubfolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Search sub-folders too'**
+  String get searchSubfolders;
+
+  /// No description provided for @searchHereOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Search this folder only'**
+  String get searchHereOnly;
+
+  /// No description provided for @seeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get seeAll;
+
+  /// No description provided for @showHiddenFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden files'**
+  String get showHiddenFiles;
+
+  /// No description provided for @storageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get storageTitle;
+
+  /// No description provided for @storageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s using space, large files and duplicates'**
+  String get storageSubtitle;
+
+  /// No description provided for @storageByType.
+  ///
+  /// In en, this message translates to:
+  /// **'By kind of file · {size}'**
+  String storageByType(String size);
+
+  /// No description provided for @storageCleanUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean up'**
+  String get storageCleanUp;
+
+  /// No description provided for @storageScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See what\'s using space'**
+  String get storageScanTitle;
+
+  /// No description provided for @storageScanBodyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning reads file names and sizes across your storage, then compares files of the same size to find duplicates. Nothing leaves your phone.'**
+  String get storageScanBodyAll;
+
+  /// No description provided for @storageScanBodyFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning reads file names and sizes in the folders you chose. Allow access to all files to scan your whole phone.'**
+  String get storageScanBodyFolders;
+
+  /// No description provided for @storageScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking through your storage…'**
+  String get storageScanning;
+
+  /// No description provided for @storageSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Some folders can\'t be read by any app (for example other apps\' private data) and are not included.'**
+  String get storageSkipped;
+
+  /// No description provided for @toolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools'**
+  String get toolsTitle;
+
+  /// No description provided for @volumeUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {total} used'**
+  String volumeUsage(String used, String total);
+
+  /// No description provided for @volumeFree.
+  ///
+  /// In en, this message translates to:
+  /// **'{free} free'**
+  String volumeFree(String free);
 }
 
 class _AppLocalizationsDelegate

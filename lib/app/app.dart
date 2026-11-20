@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
 import '../features/access/presentation/access_screen.dart';
+import '../features/access/presentation/storage_access_controller.dart';
 import '../features/home/presentation/home_shell.dart';
 import '../features/settings/presentation/settings_controller.dart';
 import '../l10n/app_localizations.dart';
@@ -25,16 +26,19 @@ class ChatMediaCleanerApp extends StatelessWidget {
   }
 }
 
-/// Shows the folder explainer until a folder was chosen, then the app's
-/// two tabs.
+/// Shows the folder explainer until a folder was chosen or all-files
+/// access was given, then the app's two tabs.
 class HomeGate extends ConsumerWidget {
   const HomeGate({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsControllerProvider);
+    // With all-files access the app is useful as a file manager even
+    // before a chat folder is found.
+    final allFiles = ref.watch(allFilesAccessControllerProvider).value ?? false;
     return switch (settings) {
-      AsyncData(:final value) when value.sources.isEmpty =>
+      AsyncData(:final value) when value.sources.isEmpty && !allFiles =>
         const AccessScreen(),
       AsyncData() => const HomeShell(),
       AsyncError() => Scaffold(

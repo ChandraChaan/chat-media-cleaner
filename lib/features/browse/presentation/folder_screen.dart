@@ -6,14 +6,19 @@ import '../../../core/format.dart';
 import '../../../core/l10n.dart';
 import '../../../core/media_labels.dart';
 import '../../media/domain/media_file.dart';
+import '../../media/domain/media_type.dart';
+import '../../places/presentation/places_controller.dart';
 import '../../review/presentation/media_tile.dart';
-import '../../review/presentation/move_to_trash_flow.dart';
 import '../../review/presentation/review_controller.dart';
+import '../../storage/domain/file_category.dart';
 import '../../viewer/domain/view_kind.dart';
 import '../../viewer/presentation/file_actions.dart';
 import '../../viewer/presentation/viewer_screen.dart';
 import '../domain/browse_entry.dart';
+import '../domain/file_clipboard.dart';
 import 'browse_controller.dart';
+import 'file_manager_actions.dart';
+import 'item_details.dart';
 import 'rename_dialog.dart';
 
 void openFolder(BuildContext context, BrowseLocation location) {
@@ -22,10 +27,26 @@ void openFolder(BuildContext context, BrowseLocation location) {
   );
 }
 
-enum _FileAction { openWith, share, rename, details, trash }
+enum ItemAction {
+  openWith,
+  share,
+  copy,
+  move,
+  rename,
+  compress,
+  extract,
+  favourite,
+  details,
+  trash,
+}
 
-/// One folder: its sub-folders and files, with search, sorting, a list or
-/// grid, and actions on one file or a selection.
+enum _FolderMenu { newFolder, showHidden, favourite, details }
+
+enum _SelectionMenu { rename, compress, favourite, details }
+
+/// One folder: its sub-folders and files, with search (here or in every
+/// sub-folder), a type filter, sorting, a list or grid, and actions on one
+/// item or a selection of files and folders.
 class FolderScreen extends ConsumerStatefulWidget {
   const FolderScreen({required this.location, super.key});
 
@@ -38,6 +59,7 @@ class FolderScreen extends ConsumerStatefulWidget {
 class _FolderScreenState extends ConsumerState<FolderScreen> {
   final _search = TextEditingController();
   bool _searching = false;
+  bool _deep = false;
   String _query = '';
   Set<String> _selected = const {};
 
@@ -49,61 +71,164 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
     super.dispose();
   }
 
-  void _toggle(MediaFile file) => setState(
-    () => _selected = _selected.contains(file.key)
-        ? ({..._selected}..remove(file.key))
-        : {..._selected, file.key},
+  void _toggle(MediaFile item) => setState(
+    () => _selected = _selected.contains(item.key)
+        ? ({..._selected}..remove(item.key))
+        : {..._selected, item.key},
   );
+
+  void _clearSelection() => setState(() => _selected = const {});
 
   void _closeSearch() => setState(() {
     _searching = false;
+    _deep = false;
     _query = '';
     _search.clear();
   });
 
-  Future<void> _trash(List<MediaFile> files) async {
-    await moveToTrashFlow(context, ref, files);
-    if (mounted) setState(() => _selected = const {});
+  /// The folder as an item, for starring it or showing its details.
+  MediaFile? get _self {
+    if (_location.isRoot) return null;
+    final names = _location.path;
+    final parentPath = names.sublist(0, names.length - 1).join('/');
+    return MediaFile(
+      id: _location.dirId,
+      sourceId: _location.source.id,
+      parentId: '',
+      name: names.last,
+      relativePath: parentPath.isEmpty
+          ? names.last
+          : '$parentPath/${names.last}',
+      size: 0,
+      modified: DateTime.utc(1970),
+      type: MediaType.other,
+      mimeType: MediaFile.folderMimeType,
+    );
   }
 
-  Future<void> _rename(MediaFile file) async {
-    final renamed = await showRenameDialog(context, file);
-    if (renamed == null || renamed.name == file.name || !mounted) return;
+  Future<void> _onItemAction(ItemAction action, MediaFile item) async {
+    switch (action) {
+      case ItemAction.openWith:
+        await openWith(context, ref, item);
+      case ItemAction.share:
+        await shareFiles(context, ref, [item]);
+      case ItemAction.copy:
+        copyToClipboard(context, ref, ClipboardMode.copy, [item]);
+      case ItemAction.move:
+        copyToClipboard(context, ref, ClipboardMode.move, [item]);
+      case ItemAction.rename:
+        await _rename(item);
+      case ItemAction.compress:
+        await compressItems(context, ref, _location, [item]);
+      case ItemAction.extract:
+        await extractArchive(context, ref, item);
+      case ItemAction.favourite:
+        await toggleFavourite(context, ref, item);
+      case ItemAction.details:
+        await showItemDetails(context, item);
+      case ItemAction.trash:
+        await trashItems(context, ref, [item]);
+    }
+  }
+
+  Future<void> _rename(MediaFile item) async {
+    final renamed = await showRenameDialog(context, item);
+    if (renamed == null || renamed.name == item.name || !mounted) return;
     showMessage(context, context.l10n.renamed(renamed.name));
   }
 
-  void _onFileAction(_FileAction action, MediaFile file) {
+  Future<void> _onFolderMenu(_FolderMenu action) async {
     switch (action) {
-      case _FileAction.openWith:
-        openWith(context, ref, file);
-      case _FileAction.share:
-        shareFiles(context, ref, [file]);
-      case _FileAction.rename:
-        _rename(file);
-      case _FileAction.details:
-        showFileDetails(context, file);
-      case _FileAction.trash:
-        _trash([file]);
+      case _FolderMenu.newFolder:
+        await _newFolder();
+      case _FolderMenu.showHidden:
+        ref.read(showHiddenProvider.notifier).toggle();
+      case _FolderMenu.favourite:
+        if (_self case final self?) await toggleFavourite(context, ref, self);
+      case _FolderMenu.details:
+        if (_self case final self?) await showItemDetails(context, self);
     }
+  }
+
+  Future<void> _newFolder() async {
+    final folder = await showNewFolderDialog(context, _location);
+    if (folder == null || !mounted) return;
+    showMessage(context, context.l10n.folderCreated(folder.name));
+  }
+
+  Future<void> _onSelectionMenu(
+    _SelectionMenu action,
+    List<MediaFile> selected,
+  ) async {
+    switch (action) {
+      case _SelectionMenu.rename:
+        await _rename(selected.single);
+      case _SelectionMenu.compress:
+        await compressItems(context, ref, _location, selected);
+      case _SelectionMenu.favourite:
+        await toggleFavourite(context, ref, selected.single);
+      case _SelectionMenu.details:
+        await showItemDetails(context, selected.single);
+    }
+    if (mounted) _clearSelection();
+  }
+
+  void _openSearchResult(List<MediaFile> results, MediaFile item) {
+    if (item.isFolder) {
+      openFolder(context, BrowseLocation.ofFolder(_location.source, item));
+      return;
+    }
+    final files = [
+      for (final f in results)
+        if (!f.isFolder) f,
+    ];
+    openViewer(context, files: files, index: files.indexOf(item));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = context.localeName;
-    final shown = ref.watch(
-      shownListingProvider((location: _location, query: _query)),
-    );
+    final deepSearch = _searching && _deep && _query.trim().isNotEmpty;
+    final ShownListingRef shownRef = (location: _location, query: _query);
+    final shown = deepSearch
+        ? ref
+              .watch(deepSearchProvider(shownRef))
+              .whenData(
+                (found) => FolderListing(
+                  folders: const [],
+                  files: [
+                    for (final f in found)
+                      if (!f.isFolder) f,
+                  ],
+                ),
+              )
+        : ref.watch(shownListingProvider(shownRef));
+    final deepFolders = deepSearch
+        ? [
+            for (final f
+                in ref.watch(deepSearchProvider(shownRef)).value ??
+                    const <MediaFile>[])
+              if (f.isFolder) f,
+          ]
+        : const <MediaFile>[];
     final grid = ref.watch(browseGridProvider);
-    final files = shown.value?.files ?? const <MediaFile>[];
-    // Only files still on screen count as selected, so an action never
+    final clipboard = ref.watch(clipboardProvider);
+    final listing = shown.value;
+    final items = [
+      if (listing != null)
+        for (final folder in listing.folders) folder.asItem(_location),
+      ...deepFolders,
+      ...?listing?.files,
+    ];
+    // Only items still on screen count as selected, so an action never
     // touches something the user cannot see.
     final selected = [
-      for (final f in files)
-        if (_selected.contains(f.key)) f,
+      for (final item in items)
+        if (_selected.contains(item.key)) item,
     ];
     final selecting = selected.isNotEmpty;
-    final allSelected = selecting && selected.length == files.length;
+    final allSelected = selecting && selected.length == items.length;
 
     final PreferredSizeWidget appBar;
     if (selecting) {
@@ -112,7 +237,7 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
           key: const Key('cancel-selection'),
           tooltip: l10n.cancelSelection,
           icon: const Icon(Icons.close),
-          onPressed: () => setState(() => _selected = const {}),
+          onPressed: _clearSelection,
         ),
         title: Text(
           l10n.selectedCount(
@@ -128,8 +253,42 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
             onPressed: () => setState(
               () => _selected = allSelected
                   ? const {}
-                  : {for (final f in files) f.key},
+                  : {for (final item in items) item.key},
             ),
+          ),
+          PopupMenuButton<_SelectionMenu>(
+            key: const Key('selection-menu'),
+            tooltip: l10n.moreActions,
+            onSelected: (action) => _onSelectionMenu(action, selected),
+            itemBuilder: (_) => [
+              if (selected.length == 1)
+                PopupMenuItem(
+                  value: _SelectionMenu.rename,
+                  child: Text(l10n.actionRename),
+                ),
+              PopupMenuItem(
+                value: _SelectionMenu.compress,
+                child: Text(l10n.actionCompress),
+              ),
+              if (selected.length == 1) ...[
+                PopupMenuItem(
+                  value: _SelectionMenu.favourite,
+                  child: Text(
+                    ref
+                                .read(placesControllerProvider)
+                                .value
+                                ?.isFavourite(selected.single) ??
+                            false
+                        ? l10n.removeFavourite
+                        : l10n.addFavourite,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _SelectionMenu.details,
+                  child: Text(l10n.actionDetails),
+                ),
+              ],
+            ],
           ),
         ],
       );
@@ -146,13 +305,28 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
           autofocus: true,
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: l10n.searchHint,
+            hintText: _deep ? l10n.searchDeepHint : l10n.searchHint,
             border: InputBorder.none,
           ),
           onChanged: (text) => setState(() => _query = text),
         ),
+        actions: [
+          IconButton(
+            key: const Key('search-deep'),
+            tooltip: _deep ? l10n.searchHereOnly : l10n.searchSubfolders,
+            isSelected: _deep,
+            icon: const Icon(Icons.account_tree_outlined),
+            selectedIcon: const Icon(Icons.account_tree),
+            onPressed: () => setState(() => _deep = !_deep),
+          ),
+        ],
       );
     } else {
+      final starred =
+          _self != null &&
+          (ref.watch(placesControllerProvider).value?.isFavourite(_self!) ??
+              false);
+      final showHidden = ref.watch(showHiddenProvider);
       appBar = AppBar(
         title: Text(
           _location.isRoot ? _location.source.label(l10n) : _location.path.last,
@@ -171,6 +345,35 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
             onPressed: ref.read(browseGridProvider.notifier).toggle,
           ),
           const _SortMenu(),
+          PopupMenuButton<_FolderMenu>(
+            key: const Key('folder-menu'),
+            tooltip: l10n.moreActions,
+            onSelected: _onFolderMenu,
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                key: const Key('menu-new-folder'),
+                value: _FolderMenu.newFolder,
+                child: Text(l10n.newFolderTitle),
+              ),
+              CheckedPopupMenuItem(
+                value: _FolderMenu.showHidden,
+                checked: showHidden,
+                child: Text(l10n.showHiddenFiles),
+              ),
+              if (_self != null) ...[
+                PopupMenuItem(
+                  value: _FolderMenu.favourite,
+                  child: Text(
+                    starred ? l10n.removeFavourite : l10n.addFavourite,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _FolderMenu.details,
+                  child: Text(l10n.actionDetails),
+                ),
+              ],
+            ],
+          ),
         ],
         bottom: _Breadcrumb(location: _location),
       );
@@ -181,7 +384,7 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (selecting) {
-          setState(() => _selected = const {});
+          _clearSelection();
         } else {
           _closeSearch();
         }
@@ -190,21 +393,39 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
         appBar: appBar,
         body: switch (shown) {
           AsyncValue(:final value?) => RefreshIndicator(
-            onRefresh: () =>
-                ref.refresh(folderListingProvider(_location).future),
+            onRefresh: () async {
+              ref.read(folderRevisionProvider.notifier).bump();
+              await ref.read(folderListingProvider(_location).future);
+            },
             child: _Listing(
               location: _location,
-              listing: value,
+              folders: deepSearch
+                  ? deepFolders
+                  : [
+                      for (final folder in value.folders)
+                        folder.asItem(_location),
+                    ],
+              files: value.files,
+              showPaths: deepSearch,
               query: _query,
               grid: grid,
               selected: _selected,
               selecting: selecting,
-              onOpenFolder: (folder) =>
-                  openFolder(context, _location.child(folder)),
-              onOpenFile: (index) =>
-                  openViewer(context, files: value.files, index: index),
+              onOpenFolder: (folder) => deepSearch
+                  ? _openSearchResult(items, folder)
+                  : openFolder(
+                      context,
+                      BrowseLocation(
+                        source: _location.source,
+                        dirId: folder.id,
+                        path: [..._location.path, folder.name],
+                      ),
+                    ),
+              onOpenFile: (index) => deepSearch
+                  ? _openSearchResult(items, value.files[index])
+                  : openViewer(context, files: value.files, index: index),
               onToggle: _toggle,
-              onAction: _onFileAction,
+              onAction: _onItemAction,
             ),
           ),
           AsyncError() => ErrorPanel(
@@ -213,12 +434,36 @@ class _FolderScreenState extends ConsumerState<FolderScreen> {
           ),
           _ => const Center(child: CircularProgressIndicator()),
         },
+        floatingActionButton: selecting || _searching || clipboard != null
+            ? null
+            : FloatingActionButton(
+                key: const Key('new-folder'),
+                tooltip: l10n.newFolderTitle,
+                onPressed: _newFolder,
+                child: const Icon(Icons.create_new_folder_outlined),
+              ),
         bottomNavigationBar: selecting
             ? _SelectionBar(
-                files: selected,
-                onShare: () => shareFiles(context, ref, selected),
-                onTrash: () => _trash(selected),
+                items: selected,
+                onCopy: () {
+                  copyToClipboard(context, ref, ClipboardMode.copy, selected);
+                  _clearSelection();
+                },
+                onMove: () {
+                  copyToClipboard(context, ref, ClipboardMode.move, selected);
+                  _clearSelection();
+                },
+                onShare: () => shareFiles(context, ref, [
+                  for (final item in selected)
+                    if (!item.isFolder) item,
+                ]),
+                onTrash: () async {
+                  await trashItems(context, ref, selected);
+                  if (mounted) _clearSelection();
+                },
               )
+            : clipboard != null
+            ? PasteBar(clipboard: clipboard, target: _location)
             : null,
       ),
     );
@@ -309,10 +554,54 @@ class _Breadcrumb extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// Chips that limit the listing to one kind of file.
+class _TypeFilterBar extends ConsumerWidget {
+  const _TypeFilterBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final current = ref.watch(typeFilterProvider);
+    final filter = ref.read(typeFilterProvider.notifier);
+    return SizedBox(
+      height: 56,
+      child: ListView(
+        key: const Key('type-filters'),
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: ChoiceChip(
+              key: const Key('filter-all'),
+              label: Text(l10n.filterAll),
+              selected: current == null,
+              onSelected: (_) => filter.set(null),
+            ),
+          ),
+          for (final category in FileCategory.values)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: ChoiceChip(
+                key: Key('filter-${category.name}'),
+                avatar: Icon(category.icon, size: 18),
+                label: Text(category.label(l10n)),
+                selected: current == category,
+                onSelected: (on) => filter.set(on ? category : null),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Listing extends StatelessWidget {
   const _Listing({
     required this.location,
-    required this.listing,
+    required this.folders,
+    required this.files,
+    required this.showPaths,
     required this.query,
     required this.grid,
     required this.selected,
@@ -324,25 +613,31 @@ class _Listing extends StatelessWidget {
   });
 
   final BrowseLocation location;
-  final FolderListing listing;
+
+  /// Folders as items ([MediaFile.isFolder]).
+  final List<MediaFile> folders;
+  final List<MediaFile> files;
+
+  /// Search results from sub-folders say where they are.
+  final bool showPaths;
   final String query;
   final bool grid;
   final Set<String> selected;
   final bool selecting;
-  final ValueChanged<BrowseFolder> onOpenFolder;
+  final ValueChanged<MediaFile> onOpenFolder;
   final ValueChanged<int> onOpenFile;
   final ValueChanged<MediaFile> onToggle;
-  final void Function(_FileAction action, MediaFile file) onAction;
+  final void Function(ItemAction action, MediaFile item) onAction;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final files = listing.files;
-    if (listing.isEmpty) {
+    if (folders.isEmpty && files.isEmpty) {
       return CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          const SliverToBoxAdapter(child: _TypeFilterBar()),
           SliverFillRemaining(
             hasScrollBody: false,
             child: _EmptyFolder(
@@ -357,15 +652,22 @@ class _Listing extends StatelessWidget {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        const SliverToBoxAdapter(child: _TypeFilterBar()),
         SliverList.builder(
-          itemCount: listing.folders.length,
+          itemCount: folders.length,
           itemBuilder: (context, index) {
-            final folder = listing.folders[index];
+            final folder = folders[index];
             return _FolderTile(
               key: ValueKey('folder|${folder.id}'),
-              location: location,
               folder: folder,
-              onTap: selecting ? null : () => onOpenFolder(folder),
+              showPath: showPaths,
+              selected: selected.contains(folder.key),
+              selecting: selecting,
+              onTap: selecting
+                  ? () => onToggle(folder)
+                  : () => onOpenFolder(folder),
+              onLongPress: () => onToggle(folder),
+              onAction: (action) => onAction(action, folder),
             );
           },
         ),
@@ -383,7 +685,7 @@ class _Listing extends StatelessWidget {
           ),
         if (grid)
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
             sliver: SliverGrid.builder(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 128,
@@ -407,7 +709,7 @@ class _Listing extends StatelessWidget {
           )
         else
           SliverPadding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: 96),
             sliver: SliverList.builder(
               itemCount: files.length,
               itemBuilder: (context, index) {
@@ -415,6 +717,7 @@ class _Listing extends StatelessWidget {
                 return _FileListTile(
                   key: ValueKey(file.key),
                   file: file,
+                  showPath: showPaths,
                   selected: selected.contains(file.key),
                   selecting: selecting,
                   onTap: selecting
@@ -431,52 +734,111 @@ class _Listing extends StatelessWidget {
   }
 }
 
+/// The actions offered for one file or folder.
+class _ItemMenu extends ConsumerWidget {
+  const _ItemMenu({required this.item, required this.onAction});
+
+  final MediaFile item;
+  final ValueChanged<ItemAction> onAction;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final starred =
+        ref.watch(placesControllerProvider).value?.isFavourite(item) ?? false;
+    PopupMenuItem<ItemAction> entry(ItemAction action, String text) =>
+        PopupMenuItem(value: action, child: Text(text));
+    return PopupMenuButton<ItemAction>(
+      key: ValueKey('menu|${item.name}'),
+      tooltip: l10n.fileMenuTooltip(item.name),
+      onSelected: onAction,
+      itemBuilder: (_) => [
+        if (!item.isFolder) ...[
+          entry(ItemAction.openWith, l10n.openWith),
+          entry(ItemAction.share, l10n.actionShare),
+        ],
+        entry(ItemAction.copy, l10n.actionCopy),
+        entry(ItemAction.move, l10n.actionMove),
+        entry(ItemAction.rename, l10n.actionRename),
+        entry(ItemAction.compress, l10n.actionCompress),
+        if (!item.isFolder && FileCategories.isZip(item.name))
+          entry(ItemAction.extract, l10n.actionExtract),
+        entry(
+          ItemAction.favourite,
+          starred ? l10n.removeFavourite : l10n.addFavourite,
+        ),
+        entry(ItemAction.details, l10n.actionDetails),
+        entry(ItemAction.trash, l10n.moveToTrash),
+      ],
+    );
+  }
+}
+
 class _FolderTile extends ConsumerWidget {
   const _FolderTile({
-    required this.location,
     required this.folder,
+    required this.showPath,
+    required this.selected,
+    required this.selecting,
     required this.onTap,
+    required this.onLongPress,
+    required this.onAction,
     super.key,
   });
 
-  final BrowseLocation location;
-  final BrowseFolder folder;
-  final VoidCallback? onTap;
+  final MediaFile folder;
+  final bool showPath;
+  final bool selected;
+  final bool selecting;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final ValueChanged<ItemAction> onAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final locale = context.localeName;
-    final path = location.isRoot
-        ? folder.name
-        : '${location.relativePath}/${folder.name}';
+    final scheme = Theme.of(context).colorScheme;
     final stats = ref.watch(
       folderStatsProvider.select(
-        (s) => s[FolderStats.keyOf(location.source.id, path)],
+        (s) => s[FolderStats.keyOf(folder.sourceId, folder.relativePath)],
       ),
     );
+    final starred =
+        ref.watch(placesControllerProvider).value?.isFavourite(folder) ?? false;
+    final detail = stats == null
+        ? formatDate(folder.modified, locale)
+        : l10n.folderStats(
+            stats.count,
+            formatCount(stats.count, locale),
+            formatBytes(stats.bytes, locale),
+          );
     return ListTile(
-      enabled: onTap != null,
+      selected: selected,
+      selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
       leading: SizedBox.square(
         dimension: 48,
         child: Icon(
-          Icons.folder,
+          starred ? Icons.folder_special : Icons.folder,
           size: 36,
-          color: Theme.of(context).colorScheme.primary,
+          color: scheme.primary,
         ),
       ),
       title: Text(folder.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        stats == null
-            ? formatDate(folder.modified, locale)
-            : l10n.folderStats(
-                stats.count,
-                formatCount(stats.count, locale),
-                formatBytes(stats.bytes, locale),
-              ),
+        showPath && folder.folder.isNotEmpty
+            ? '${folder.folder.replaceAll('/', ' › ')}\n$detail'
+            : detail,
       ),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: selecting
+          ? Checkbox(
+              value: selected,
+              onChanged: (_) => onTap(),
+              semanticLabel: folder.name,
+            )
+          : _ItemMenu(item: folder, onAction: onAction),
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }
@@ -490,12 +852,17 @@ class _FilePicture extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kind = ViewKinds.of(name: file.name, mimeType: file.mimeType);
+    final category = FileCategories.of(file.name, mimeType: file.mimeType);
     return switch (kind) {
       ViewKind.image ||
       ViewKind.video => FileThumbnail(fileRef: file.ref, type: file.type),
+      _ when category == FileCategory.apps => FileThumbnail(
+        fileRef: file.ref,
+        type: file.type,
+      ),
       _ => Center(
         child: Icon(
-          kind.icon,
+          category == FileCategory.archives ? category.icon : kind.icon,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
@@ -506,6 +873,7 @@ class _FilePicture extends StatelessWidget {
 class _FileListTile extends StatelessWidget {
   const _FileListTile({
     required this.file,
+    required this.showPath,
     required this.selected,
     required this.selecting,
     required this.onTap,
@@ -515,17 +883,20 @@ class _FileListTile extends StatelessWidget {
   });
 
   final MediaFile file;
+  final bool showPath;
   final bool selected;
   final bool selecting;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final ValueChanged<_FileAction> onAction;
+  final ValueChanged<ItemAction> onAction;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final locale = context.localeName;
     final scheme = Theme.of(context).colorScheme;
+    final detail =
+        '${formatBytes(file.size, locale)} · '
+        '${formatDate(file.modified, locale)}';
     return ListTile(
       selected: selected,
       selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
@@ -541,8 +912,9 @@ class _FileListTile extends StatelessWidget {
       ),
       title: Text(file.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${formatBytes(file.size, locale)} · '
-        '${formatDate(file.modified, locale)}',
+        showPath && file.folder.isNotEmpty
+            ? '${file.folder.replaceAll('/', ' › ')}\n$detail'
+            : detail,
       ),
       trailing: selecting
           ? Checkbox(
@@ -550,33 +922,7 @@ class _FileListTile extends StatelessWidget {
               onChanged: (_) => onTap(),
               semanticLabel: file.name,
             )
-          : PopupMenuButton<_FileAction>(
-              key: ValueKey('menu|${file.name}'),
-              tooltip: l10n.fileMenuTooltip(file.name),
-              onSelected: onAction,
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: _FileAction.openWith,
-                  child: Text(l10n.openWith),
-                ),
-                PopupMenuItem(
-                  value: _FileAction.share,
-                  child: Text(l10n.actionShare),
-                ),
-                PopupMenuItem(
-                  value: _FileAction.rename,
-                  child: Text(l10n.actionRename),
-                ),
-                PopupMenuItem(
-                  value: _FileAction.details,
-                  child: Text(l10n.actionDetails),
-                ),
-                PopupMenuItem(
-                  value: _FileAction.trash,
-                  child: Text(l10n.moveToTrash),
-                ),
-              ],
-            ),
+          : _ItemMenu(item: file, onAction: onAction),
       onTap: onTap,
       onLongPress: onLongPress,
     );
@@ -669,12 +1015,16 @@ class _FileGridTile extends StatelessWidget {
 
 class _SelectionBar extends StatelessWidget {
   const _SelectionBar({
-    required this.files,
+    required this.items,
+    required this.onCopy,
+    required this.onMove,
     required this.onShare,
     required this.onTrash,
   });
 
-  final List<MediaFile> files;
+  final List<MediaFile> items;
+  final VoidCallback onCopy;
+  final VoidCallback onMove;
   final VoidCallback onShare;
   final VoidCallback onTrash;
 
@@ -682,15 +1032,16 @@ class _SelectionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = context.localeName;
-    final bytes = files.fold(0, (sum, f) => sum + f.size);
+    final bytes = items.fold(0, (sum, f) => sum + f.size);
+    final hasFiles = items.any((item) => !item.isFolder);
     return BottomAppBar(
       child: Row(
         children: [
           Expanded(
             child: Text(
               l10n.selectedSummary(
-                files.length,
-                formatCount(files.length, locale),
+                items.length,
+                formatCount(items.length, locale),
                 formatBytes(bytes, locale),
               ),
               key: const Key('selection-summary'),
@@ -698,10 +1049,22 @@ class _SelectionBar extends StatelessWidget {
             ),
           ),
           IconButton(
+            key: const Key('browse-copy'),
+            tooltip: l10n.actionCopy,
+            icon: const Icon(Icons.copy_outlined),
+            onPressed: onCopy,
+          ),
+          IconButton(
+            key: const Key('browse-move'),
+            tooltip: l10n.actionMove,
+            icon: const Icon(Icons.drive_file_move_outline),
+            onPressed: onMove,
+          ),
+          IconButton(
             key: const Key('browse-share'),
             tooltip: l10n.actionShare,
             icon: const Icon(Icons.share_outlined),
-            onPressed: onShare,
+            onPressed: hasFiles ? onShare : null,
           ),
           const SizedBox(width: 4),
           IconButton.filledTonal(

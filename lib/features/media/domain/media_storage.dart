@@ -83,10 +83,87 @@ final class PdfPageImage {
   final int height;
 }
 
+/// A file or folder made by [MediaStorage.createFolder], a copy, a move or
+/// an archive operation.
+final class StoredItem {
+  const StoredItem({required this.id, required this.name});
+
+  final String id;
+
+  /// The name it got; numbered when the wanted name was taken.
+  final String name;
+}
+
+/// How much a folder holds, counting everything below it.
+final class FolderSize {
+  const FolderSize({this.bytes = 0, this.files = 0, this.folders = 0});
+
+  final int bytes;
+  final int files;
+  final int folders;
+}
+
+/// Internal storage or a memory card, as seen with all-files access.
+final class StorageVolume {
+  const StorageVolume({
+    required this.path,
+    required this.label,
+    required this.isPrimary,
+    required this.isRemovable,
+    required this.totalBytes,
+    required this.freeBytes,
+  });
+
+  /// Absolute path of the volume's top folder, for example
+  /// `/storage/emulated/0`.
+  final String path;
+
+  /// The name Android gives it, for example "Internal shared storage".
+  final String label;
+  final bool isPrimary;
+  final bool isRemovable;
+  final int totalBytes;
+  final int freeBytes;
+
+  int get usedBytes => (totalBytes - freeBytes).clamp(0, totalBytes);
+
+  /// 0 to 1.
+  double get usedFraction => totalBytes <= 0 ? 0 : usedBytes / totalBytes;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StorageVolume &&
+      other.path == path &&
+      other.label == label &&
+      other.isPrimary == isPrimary &&
+      other.isRemovable == isRemovable &&
+      other.totalBytes == totalBytes &&
+      other.freeBytes == freeBytes;
+
+  @override
+  int get hashCode =>
+      Object.hash(path, label, isPrimary, isRemovable, totalBytes, freeBytes);
+}
+
+/// Tree URIs that start with this are file-system trees: their ids are
+/// absolute paths, readable while the app has all-files access. Every
+/// other tree URI is a Storage Access Framework grant.
+const fileTreeScheme = 'file://';
+
+/// The tree URI of the file-system tree rooted at [path].
+String fileTreeUri(String path) => '$fileTreeScheme$path';
+
+/// Whether [treeUri] is a file-system tree rather than a folder grant.
+bool isFileTree(String treeUri) => treeUri.startsWith(fileTreeScheme);
+
 /// File operations on the folders the user granted access to.
 ///
-/// On Android this is the Storage Access Framework; tests use an in-memory
-/// fake. Every id is opaque except where a method says otherwise.
+/// On Android this is the Storage Access Framework for folders picked in
+/// the system picker, and plain files for [fileTreeUri] trees while the app
+/// has all-files access; tests use an in-memory fake. Every id is opaque
+/// except where a method says otherwise. Folders and files share one id
+/// space, and the operations below work on both unless a method says
+/// otherwise.
 abstract interface class MediaStorage {
   /// Files and folders directly inside [dirId].
   Future<List<StorageEntry>> listChildren(String treeUri, String dirId);
@@ -123,6 +200,60 @@ abstract interface class MediaStorage {
     required String fileId,
     required String parentId,
     required String newName,
+  });
+
+  /// Makes a new empty folder [name] in [parentId]. Throws
+  /// [StorageError.nameTaken] when something there already has that name.
+  Future<StoredItem> createFolder(
+    String treeUri, {
+    required String parentId,
+    required String name,
+  });
+
+  /// Copies a file or a whole folder into [targetParentId], which may be
+  /// in another tree. The copy gets a numbered name when its name is taken.
+  /// Throws [StorageError.invalidTarget] when a folder would be copied into
+  /// itself.
+  Future<StoredItem> copy(
+    String treeUri, {
+    required String id,
+    required String targetTreeUri,
+    required String targetParentId,
+  });
+
+  /// Moves a file or a whole folder from [parentId] into [targetParentId],
+  /// numbering its name when taken. Throws [StorageError.invalidTarget]
+  /// when a folder would be moved into itself.
+  Future<StoredItem> move(
+    String treeUri, {
+    required String id,
+    required String parentId,
+    required String targetTreeUri,
+    required String targetParentId,
+  });
+
+  /// Deletes a file or folder for good, without the trash.
+  Future<void> deletePermanently(String treeUri, String id);
+
+  /// Size and number of files of a folder and everything below it.
+  Future<FolderSize> folderSize(String treeUri, String id);
+
+  /// Packs [ids] (files and folders) into a ZIP archive called [name] in
+  /// [parentId].
+  Future<StoredItem> zip(
+    String treeUri, {
+    required List<String> ids,
+    required String parentId,
+    required String name,
+  });
+
+  /// Unpacks the ZIP archive [id] into a new folder next to it, named
+  /// after the archive. Throws [StorageError.unreadable] for a damaged
+  /// archive.
+  Future<StoredItem> unzip(
+    String treeUri, {
+    required String id,
+    required String parentId,
   });
 
   /// Saves the picture a video shows at [position] as a JPEG called [name]
@@ -214,6 +345,19 @@ abstract interface class FolderAccess {
   Future<void> releaseFolder(String treeUri);
 }
 
+/// Access to every file on the phone: "All files access" on Android 11 and
+/// newer, the storage permission on older versions.
+abstract interface class AllFilesAccess {
+  Future<bool> hasAllFilesAccess();
+
+  /// Opens Android's screen (or dialog) for the permission and reports
+  /// whether it is granted afterwards.
+  Future<bool> requestAllFilesAccess();
+
+  /// Internal storage and any memory cards that are mounted.
+  Future<List<StorageVolume>> storageVolumes();
+}
+
 /// Why a storage call failed.
 enum StorageError {
   /// The file or folder no longer exists.
@@ -239,6 +383,9 @@ enum StorageError {
 
   /// The file is damaged or not what its name says.
   unreadable,
+
+  /// A folder can't be copied or moved into itself.
+  invalidTarget,
 
   /// Anything else.
   failed,

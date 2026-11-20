@@ -5,24 +5,31 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentResolver
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.pdf.PdfRenderer
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
+import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
-import android.provider.DocumentsContract.Document
+import android.util.Log
+import android.util.Size
 import android.view.WindowManager
+import android.webkit.MimeTypeMap
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -30,26 +37,26 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Storage Access Framework operations for the Dart `PlatformMediaStorage`.
+ * Storage operations for the Dart `PlatformMediaStorage`.
  *
- * Everything works on folders the user picked with ACTION_OPEN_DOCUMENT_TREE, so the
- * app needs no storage permission. Slow work runs on background threads and replies
- * on the main thread.
+ * Every call names a tree. A `content://` tree is a folder the user picked with
+ * ACTION_OPEN_DOCUMENT_TREE (Storage Access Framework, no permission needed) and its
+ * ids are document ids. A `file://` tree is the file system reached with all-files
+ * access (MANAGE_EXTERNAL_STORAGE, or READ/WRITE_EXTERNAL_STORAGE before Android 11);
+ * its ids are absolute paths and the path inside the tree URI is only a label. Both
+ * kinds go through [DocTree]. Slow work runs on background threads and replies on the
+ * main thread.
  */
 class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallHandler {
     companion object {
         const val CHANNEL = "dev.chandra.chat_media_cleaner/storage"
+        private const val TAG = "StorageChannel"
         private const val REQUEST_PICK_FOLDER = 0x5AF
         private const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
+        private const val FILE_TREE_PREFIX = "file://"
+        private const val APK_MIME = "application/vnd.android.package-archive"
         private const val GRANT_FLAGS =
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        private val CHILD_COLUMNS = arrayOf(
-            Document.COLUMN_DOCUMENT_ID,
-            Document.COLUMN_DISPLAY_NAME,
-            Document.COLUMN_MIME_TYPE,
-            Document.COLUMN_SIZE,
-            Document.COLUMN_LAST_MODIFIED,
-        )
     }
 
     private val io: ExecutorService = Executors.newFixedThreadPool(2)
@@ -63,6 +70,17 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     private val resolver: ContentResolver get() = activity.contentResolver
     private val trashDirs = ConcurrentHashMap<String, String>()
     private var pendingPick: MethodChannel.Result? = null
+    private val access = AllFilesAccess(activity)
+
+    private val fsTree: FsTree by lazy {
+        val authority = FilesProvider.authority(activity)
+        FsTree(
+            mimeForExtension = { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) },
+            shareUriFor = { FilesProvider.uriFor(authority, it) },
+            hidesOtherAppsDirs = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R,
+            ownPackage = activity.packageName,
+        )
+    }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -77,11 +95,17 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                 releaseFolder(call.str("treeUri"))
                 result.success(null)
             }
+            "allFilesAccess" -> result.success(access.status())
+            "requestAllFilesAccess" -> access.request(result)
+            "storageVolumes" -> run(io, result) { access.volumes() }
             "listChildren" -> run(io, result) { listChildren(call.tree(), call.str("docId")) }
-            "hashFile" -> run(io, result) { hashFile(call.tree(), call.str("docId")) }
+            "hashFile" -> run(io, result) {
+                call.tree().openInput(call.str("docId")).use { Hashing.sha256Hex(it) }
+            }
             "moveToTrash" -> run(io, result) {
                 moveToTrash(
                     call.tree(),
+                    treeKey = call.str("treeUri"),
                     rootId = call.str("rootId"),
                     docId = call.str("docId"),
                     parentId = call.str("parentId"),
@@ -108,7 +132,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                     call.argument<Boolean>("truncate") ?: false,
                 )
             }
-            "documentUri" -> result.success(docUri(call.tree(), call.str("docId")).toString())
+            "documentUri" -> run(io, result) { call.tree().shareUri(call.str("docId")).toString() }
             "rename" -> run(io, result) {
                 rename(call.tree(), call.str("docId"), call.str("parentId"), call.str("name"))
             }
@@ -159,14 +183,52 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                     name = call.str("name"),
                 )
             }
+            "createFolder" -> run(io, result) {
+                FileOps.createFolder(call.tree(), call.str("parentId"), call.str("name")).toMap()
+            }
+            "copyItem" -> run(io, result) {
+                FileOps.copyItem(
+                    call.tree(),
+                    call.str("docId"),
+                    treeFor(call.str("targetTreeUri")),
+                    call.str("targetParentId"),
+                ).toMap()
+            }
+            "moveItem" -> run(io, result) {
+                FileOps.moveItem(
+                    call.tree(),
+                    call.str("docId"),
+                    call.str("parentId"),
+                    treeFor(call.str("targetTreeUri")),
+                    call.str("targetParentId"),
+                ).toMap()
+            }
+            "deleteItem" -> run(io, result) {
+                FileOps.deleteItem(call.tree(), call.str("docId"))
+                null
+            }
+            "folderSize" -> run(io, result) { FileOps.folderSize(call.tree(), call.str("docId")).toMap() }
+            "zipItems" -> run(io, result) {
+                FileOps.zipItems(
+                    call.tree(),
+                    call.argument<List<String>>("docIds") ?: emptyList(),
+                    call.str("parentId"),
+                    call.str("name"),
+                ).toMap()
+            }
+            "unzip" -> run(io, result) {
+                allowAnyZipEntryNames()
+                FileOps.unzip(call.tree(), call.str("docId"), call.str("parentId")).toMap()
+            }
             "share" -> share(call.argument<List<Map<String, String>>>("items") ?: emptyList(), call.argument<String>("mime"), result)
             "openExternally" -> openExternally(call.tree(), call.str("docId"), call.argument<String>("mime"), result)
             else -> result.notImplemented()
         }
     }
 
-    /** Handles the folder picker result. Returns true when it was ours. */
+    /** Handles the folder picker and all-files settings results. Returns true when it was ours. */
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (access.onActivityResult(requestCode)) return true
         if (requestCode != REQUEST_PICK_FOLDER) return false
         val result = pendingPick ?: return true
         pendingPick = null
@@ -189,6 +251,9 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         return true
     }
 
+    /** Handles the storage permission dialog on Android 8 to 10. Returns true when it was ours. */
+    fun onRequestPermissionsResult(requestCode: Int): Boolean = access.onRequestPermissionsResult(requestCode)
+
     fun dispose() {
         io.shutdownNow()
         thumbs.shutdownNow()
@@ -196,6 +261,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         pdf.shutdown()
         pendingPick?.success(null)
         pendingPick = null
+        access.dispose()
     }
 
     private fun pickFolder(initialDocId: String?, result: MethodChannel.Result) {
@@ -232,107 +298,80 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         }
     }
 
-    private fun listChildren(tree: Uri, docId: String): List<Map<String, Any?>> {
-        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
-        val cursor = resolver.query(uri, CHILD_COLUMNS, null, null, null)
-            ?: throw FileNotFoundException(docId)
-        val rows = ArrayList<Map<String, Any?>>(cursor.count)
-        cursor.use { c ->
-            while (c.moveToNext()) {
-                val mime = c.getString(2)
-                rows += mapOf(
-                    "id" to c.getString(0),
-                    "name" to c.getString(1),
-                    "isDir" to (mime == Document.MIME_TYPE_DIR),
-                    "size" to if (c.isNull(3)) 0L else c.getLong(3),
-                    "modified" to if (c.isNull(4)) 0L else c.getLong(4),
-                    "mime" to mime,
-                )
-            }
+    private fun treeFor(treeUri: String): DocTree =
+        if (treeUri.startsWith(FILE_TREE_PREFIX)) fsTree else SafTree(Uri.parse(treeUri), resolver, ::primaryRoot)
+
+    @Suppress("DEPRECATION")
+    private fun primaryRoot(): String? = Environment.getExternalStorageDirectory()?.path
+
+    private fun listChildren(tree: DocTree, docId: String): List<Map<String, Any?>> =
+        tree.children(docId).map { node ->
+            mapOf(
+                "id" to node.id,
+                "name" to node.name,
+                "isDir" to node.isDir,
+                "size" to node.size,
+                "modified" to node.modified,
+                "mime" to node.mime,
+            )
         }
-        return rows
-    }
 
-    private fun hashFile(tree: Uri, docId: String): String =
-        resolver.openInputStream(docUri(tree, docId))?.use { Hashing.sha256Hex(it) }
-            ?: throw FileNotFoundException(docId)
-
+    /** Moves a file or folder into its own folder in the trash below [rootId]. */
     private fun moveToTrash(
-        tree: Uri,
+        tree: DocTree,
+        treeKey: String,
         rootId: String,
         docId: String,
         parentId: String,
         itemKey: String,
     ): Map<String, String> {
-        if (!exists(tree, docId)) throw FileNotFoundException(docId)
+        if (!tree.exists(docId)) throw FileNotFoundException(docId)
+        val key = "$treeKey|$rootId"
         val itemDir = try {
-            createDir(trashDir(tree, rootId), itemKey)
-        } catch (_: Exception) {
+            tree.createDir(trashDir(tree, key, rootId), itemKey)
+        } catch (e: Exception) {
             // The trash folder may have been deleted since it was cached.
-            trashDirs.remove("$tree|$rootId")
-            createDir(trashDir(tree, rootId), itemKey)
+            Log.i(TAG, "Recreating the trash folder", e)
+            trashDirs.remove(key)
+            tree.createDir(trashDir(tree, key, rootId), itemKey)
         }
         val moved = try {
-            DocumentsContract.moveDocument(resolver, docUri(tree, docId), docUri(tree, parentId), itemDir)
+            FileOps.moveOrCopy(tree, docId, parentId, itemDir, tree.node(docId).name)
         } catch (e: Exception) {
-            deleteQuietly(itemDir)
+            deleteQuietly(tree, itemDir)
             throw e
         }
-        if (moved == null) {
-            deleteQuietly(itemDir)
-            throw IOException("Could not move $docId to the trash")
-        }
-        return mapOf(
-            "itemDirId" to DocumentsContract.getDocumentId(itemDir),
-            "fileId" to DocumentsContract.getDocumentId(moved),
-        )
+        return mapOf("itemDirId" to itemDir, "fileId" to moved)
     }
 
     private fun restoreFromTrash(
-        tree: Uri,
+        tree: DocTree,
         itemDirId: String,
         docId: String,
         targetParentId: String,
     ): Map<String, String> {
-        if (!exists(tree, docId)) throw FileNotFoundException(docId)
-        if (!exists(tree, targetParentId)) {
+        if (!tree.exists(docId)) throw FileNotFoundException(docId)
+        if (!tree.exists(targetParentId)) {
             throw StorageFailure("target_missing", "The original folder no longer exists")
         }
-        val name = displayName(tree, docId)
-        val freeName = Names.firstFree(name, childNames(tree, targetParentId))
-        var fileUri = docUri(tree, docId)
-        if (freeName != name) {
-            fileUri = DocumentsContract.renameDocument(resolver, fileUri, freeName)
-                ?: throw IOException("Could not rename $docId")
-        }
-        val moved = DocumentsContract.moveDocument(
-            resolver,
-            fileUri,
-            docUri(tree, itemDirId),
-            docUri(tree, targetParentId),
-        ) ?: throw IOException("Could not move $docId back")
-        deleteQuietly(docUri(tree, itemDirId))
-        return mapOf("fileId" to DocumentsContract.getDocumentId(moved), "name" to freeName)
+        val name = tree.node(docId).name
+        val freeName = Names.firstFree(name, tree.childNames(targetParentId))
+        val moved = FileOps.moveOrCopy(tree, docId, itemDirId, targetParentId, freeName)
+        deleteQuietly(tree, itemDirId)
+        return mapOf("fileId" to moved, "name" to freeName)
     }
 
-    private fun deleteTrashItem(tree: Uri, itemDirId: String): Boolean {
-        if (!exists(tree, itemDirId)) throw FileNotFoundException(itemDirId)
-        if (!DocumentsContract.deleteDocument(resolver, docUri(tree, itemDirId))) {
-            throw IOException("Could not delete $itemDirId")
-        }
+    private fun deleteTrashItem(tree: DocTree, itemDirId: String): Boolean {
+        if (!tree.exists(itemDirId)) throw FileNotFoundException(itemDirId)
+        tree.delete(itemDirId)
         return true
     }
 
-    private fun thumbnail(tree: Uri, docId: String, size: Int): ByteArray? {
-        val uri = docUri(tree, docId)
-        val mime = resolver.getType(uri) ?: ""
-        val bitmap = providerThumbnail(uri, size)
-            ?: when {
-                mime.startsWith("video/") -> videoFrame(uri, size)
-                mime.startsWith("image/") -> decodeImage(uri, size)
-                else -> null
-            }
-            ?: return null
+    private fun thumbnail(tree: DocTree, docId: String, size: Int): ByteArray? {
+        val bitmap = when (tree) {
+            is SafTree -> safThumbnail(tree, docId, size)
+            else -> fileThumbnail(tree.pathOf(docId) ?: return null, tree.mimeOf(docId), size)
+        } ?: return null
         val (w, h) = ThumbnailMath.fit(bitmap.width, bitmap.height, size)
         val scaled = if (w != bitmap.width || h != bitmap.height) {
             Bitmap.createScaledBitmap(bitmap, w, h, true)
@@ -346,6 +385,80 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
             scaled.compress(Bitmap.CompressFormat.JPEG, 82, out)
         }
         return out.toByteArray()
+    }
+
+    private fun safThumbnail(tree: SafTree, docId: String, size: Int): Bitmap? {
+        val uri = tree.docUri(docId)
+        val mime = resolver.getType(uri) ?: ""
+        return providerThumbnail(uri, size)
+            ?: when {
+                mime.startsWith("video/") -> videoFrame(uri, size)
+                mime.startsWith("image/") -> decodeImage(uri, size)
+                else -> null
+            }
+    }
+
+    private fun fileThumbnail(path: String, mime: String, size: Int): Bitmap? {
+        val file = File(path)
+        return when {
+            mime.startsWith("image/") -> systemImageThumbnail(file, size) ?: decodeFile(path, size)
+            mime.startsWith("video/") -> systemVideoThumbnail(file, size) ?: videoFrame(Uri.fromFile(file), size)
+            mime == APK_MIME || path.endsWith(".apk", ignoreCase = true) -> apkIcon(path, size)
+            else -> null
+        }
+    }
+
+    /** The system's cached thumbnail on Android 10 and later; null falls back to decoding. */
+    private fun systemImageThumbnail(file: File, size: Int): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return try {
+            ThumbnailUtils.createImageThumbnail(file, Size(size, size), null)
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    private fun systemVideoThumbnail(file: File, size: Int): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return try {
+            ThumbnailUtils.createVideoThumbnail(file, Size(size, size), null)
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    private fun decodeFile(path: String, size: Int): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = ThumbnailMath.sampleSize(bounds.outWidth, bounds.outHeight, size)
+        }
+        return BitmapFactory.decodeFile(path, options)
+    }
+
+    /** The icon of an app package file, drawn [size] pixels square. */
+    private fun apkIcon(path: String, size: Int): Bitmap? = try {
+        val pm = activity.packageManager
+        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getPackageArchiveInfo(path, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getPackageArchiveInfo(path, 0)
+        }
+        info?.applicationInfo?.let { app ->
+            // Without these the package manager can't find the icon inside the file.
+            app.sourceDir = path
+            app.publicSourceDir = path
+            val icon = app.loadIcon(pm)
+            Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+                icon.setBounds(0, 0, size, size)
+                icon.draw(Canvas(bitmap))
+            }
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "Could not read the icon of a package file", e)
+        null
     }
 
     private fun providerThumbnail(uri: Uri, size: Int): Bitmap? = try {
@@ -381,11 +494,10 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     }
 
     /** The whole file, or with [truncate] only its first [maxBytes] bytes. */
-    private fun readBytes(tree: Uri, docId: String, maxBytes: Int, truncate: Boolean): ByteArray {
-        val uri = docUri(tree, docId)
-        val size = querySingle(uri, Document.COLUMN_SIZE)?.toLongOrNull() ?: 0L
+    private fun readBytes(tree: DocTree, docId: String, maxBytes: Int, truncate: Boolean): ByteArray {
+        val size = tree.node(docId).size
         if (size > maxBytes && !truncate) throw StorageFailure("too_large", "$size bytes")
-        return resolver.openInputStream(uri)?.use { input ->
+        return tree.openInput(docId).use { input ->
             if (size <= maxBytes) {
                 input.readBytes()
             } else {
@@ -398,29 +510,26 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
                 }
                 buffer.copyOf(filled)
             }
-        } ?: throw FileNotFoundException(docId)
+        }
     }
 
     /**
-     * Renames a file in place. The provider would silently number a name that
-     * is taken, so a clash is reported instead.
+     * Renames a file or folder in place. The provider would silently number a
+     * name that is taken, so a clash is reported instead.
      */
-    private fun rename(tree: Uri, docId: String, parentId: String, name: String): Map<String, String> {
-        if (!exists(tree, docId)) throw FileNotFoundException(docId)
-        if (name in childNames(tree, parentId)) throw StorageFailure("exists", name)
-        val renamed = DocumentsContract.renameDocument(resolver, docUri(tree, docId), name)
-            ?: throw IOException("Could not rename $docId")
-        val newId = DocumentsContract.getDocumentId(renamed)
-        return mapOf("id" to newId, "name" to (querySingle(docUri(tree, newId), Document.COLUMN_DISPLAY_NAME) ?: name))
+    private fun rename(tree: DocTree, docId: String, parentId: String, name: String): Map<String, String> {
+        if (!tree.exists(docId)) throw FileNotFoundException(docId)
+        if (name in tree.childNames(parentId)) throw StorageFailure("exists", name)
+        val newId = tree.rename(docId, name)
+        return mapOf("id" to newId, "name" to FileOps.nameOf(tree, newId, name))
     }
 
     /** Pixel size of a picture or video, and how long a video or sound lasts. */
-    private fun mediaInfo(tree: Uri, docId: String): Map<String, Any?> {
-        val uri = docUri(tree, docId)
-        val mime = resolver.getType(uri) ?: ""
+    private fun mediaInfo(tree: DocTree, docId: String): Map<String, Any?> {
+        val mime = tree.mimeOf(docId)
         if (mime.startsWith("image/")) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            tree.openInput(docId).use { BitmapFactory.decodeStream(it, null, bounds) }
             return mapOf(
                 "width" to bounds.outWidth.takeIf { it > 0 },
                 "height" to bounds.outHeight.takeIf { it > 0 },
@@ -429,7 +538,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         }
         val retriever = MediaMetadataRetriever()
         return try {
-            retriever.setDataSource(activity, uri)
+            retriever.setDataSource(activity, tree.readUri(docId))
             fun number(key: Int) = retriever.extractMetadata(key)?.toLongOrNull()
             val rotated = (number(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION) ?: 0L) % 180L != 0L
             val w = number(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
@@ -448,8 +557,8 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     }
 
     /** The open PDF for [docId], opening it (and closing another one) first. */
-    private fun pdfFor(tree: Uri, docId: String): OpenPdf {
-        val uri = docUri(tree, docId)
+    private fun pdfFor(tree: DocTree, docId: String): OpenPdf {
+        val uri = tree.readUri(docId)
         openPdf?.let { if (it.uri == uri) return it }
         closePdf()
         val descriptor = resolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(docId)
@@ -465,7 +574,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         return OpenPdf(uri, descriptor, renderer).also { openPdf = it }
     }
 
-    private fun pdfPage(tree: Uri, docId: String, index: Int, width: Int): Map<String, Any> {
+    private fun pdfPage(tree: DocTree, docId: String, index: Int, width: Int): Map<String, Any> {
         val renderer = pdfFor(tree, docId).renderer
         if (index < 0 || index >= renderer.pageCount) throw FileNotFoundException("page $index")
         renderer.openPage(index).use { page ->
@@ -503,7 +612,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
 
     /** Saves the picture a video shows at [positionMs] as a JPEG next to it. */
     private fun saveVideoFrame(
-        tree: Uri,
+        tree: DocTree,
         docId: String,
         parentId: String,
         positionMs: Long,
@@ -511,7 +620,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     ): Map<String, String> {
         val retriever = MediaMetadataRetriever()
         val frame = try {
-            retriever.setDataSource(activity, docUri(tree, docId))
+            retriever.setDataSource(activity, tree.readUri(docId))
             retriever.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
         } catch (e: Exception) {
             throw StorageFailure("unreadable", e.message ?: "No frame")
@@ -519,21 +628,15 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
             retriever.release()
         } ?: throw StorageFailure("unreadable", "No frame at $positionMs ms")
         try {
-            val freeName = Names.firstFree(name, childNames(tree, parentId))
-            val created = DocumentsContract.createDocument(resolver, docUri(tree, parentId), "image/jpeg", freeName)
-                ?: throw IOException("Could not create $freeName")
+            val freeName = Names.firstFree(name, tree.childNames(parentId))
+            val newId = tree.createFile(parentId, freeName, "image/jpeg")
             try {
-                resolver.openOutputStream(created)?.use { frame.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-                    ?: throw IOException("Could not write $freeName")
+                tree.openOutput(newId).use { frame.compress(Bitmap.CompressFormat.JPEG, 92, it) }
             } catch (e: Exception) {
-                deleteQuietly(created)
+                deleteQuietly(tree, newId)
                 throw e
             }
-            val newId = DocumentsContract.getDocumentId(created)
-            return mapOf(
-                "id" to newId,
-                "name" to (querySingle(created, Document.COLUMN_DISPLAY_NAME) ?: freeName),
-            )
+            return mapOf("id" to newId, "name" to FileOps.nameOf(tree, newId, freeName))
         } finally {
             frame.recycle()
         }
@@ -550,13 +653,18 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         }
     }
 
-    /** Opens the system share sheet for one or more files. */
+    /** Opens the system share sheet for one or more files, from any mix of trees. */
     private fun share(items: List<Map<String, String>>, mime: String?, result: MethodChannel.Result) {
         val uris = ArrayList<Uri>()
-        for (item in items) {
-            val tree = item["treeUri"] ?: continue
-            val docId = item["docId"] ?: continue
-            uris += docUri(Uri.parse(tree), docId)
+        try {
+            for (item in items) {
+                val tree = item["treeUri"] ?: continue
+                val docId = item["docId"] ?: continue
+                uris += treeFor(tree).shareUri(docId)
+            }
+        } catch (e: Exception) {
+            result.error(errorCode(e), e.message, null)
+            return
         }
         if (uris.isEmpty()) {
             result.error("not_found", "Nothing to share", null)
@@ -581,11 +689,16 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
         }
     }
 
-    private fun openExternally(tree: Uri, docId: String, mime: String?, result: MethodChannel.Result) {
-        val uri = docUri(tree, docId)
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, mime ?: resolver.getType(uri) ?: "*/*")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    private fun openExternally(tree: DocTree, docId: String, mime: String?, result: MethodChannel.Result) {
+        val intent = try {
+            val uri = tree.shareUri(docId)
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, mime ?: tree.mimeOf(docId).ifEmpty { "*/*" })
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (e: Exception) {
+            result.error(errorCode(e), e.message, null)
+            return
+        }
         try {
             activity.startActivity(intent)
             result.success(null)
@@ -595,69 +708,34 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     }
 
     /** Finds or creates the trash folder below [rootId], with a `.nomedia` file in it. */
-    private fun trashDir(tree: Uri, rootId: String): Uri {
-        val key = "$tree|$rootId"
-        trashDirs[key]?.let { return docUri(tree, it) }
-        val existing = findChild(tree, rootId, TrashFolder.NAME)
-        val dir = existing ?: createDir(docUri(tree, rootId), TrashFolder.NAME)
-        if (findChild(tree, DocumentsContract.getDocumentId(dir), TrashFolder.NO_MEDIA) == null) {
-            DocumentsContract.createDocument(resolver, dir, "application/octet-stream", TrashFolder.NO_MEDIA)
+    private fun trashDir(tree: DocTree, key: String, rootId: String): String {
+        trashDirs[key]?.let { return it }
+        val dir = tree.findChild(rootId, TrashFolder.NAME)?.id ?: tree.createDir(rootId, TrashFolder.NAME)
+        if (tree.findChild(dir, TrashFolder.NO_MEDIA) == null) {
+            tree.createFile(dir, TrashFolder.NO_MEDIA, DocTree.MIME_DEFAULT)
         }
-        trashDirs[key] = DocumentsContract.getDocumentId(dir)
+        trashDirs[key] = dir
         return dir
     }
 
-    private fun createDir(parent: Uri, name: String): Uri =
-        DocumentsContract.createDocument(resolver, parent, Document.MIME_TYPE_DIR, name)
-            ?: throw IOException("Could not create folder $name")
-
-    private fun findChild(tree: Uri, parentId: String, name: String): Uri? {
-        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId)
-        resolver.query(uri, arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME), null, null, null)
-            ?.use { c ->
-                while (c.moveToNext()) {
-                    if (c.getString(1) == name) return docUri(tree, c.getString(0))
-                }
-            }
-        return null
-    }
-
-    private fun childNames(tree: Uri, parentId: String): Set<String> {
-        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId)
-        val names = HashSet<String>()
-        resolver.query(uri, arrayOf(Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
-            while (c.moveToNext()) names += c.getString(0)
-        }
-        return names
-    }
-
-    private fun exists(tree: Uri, docId: String): Boolean = try {
-        querySingle(docUri(tree, docId), Document.COLUMN_DOCUMENT_ID) != null
-    } catch (_: IllegalArgumentException) {
-        false
-    } catch (_: FileNotFoundException) {
-        false
-    }
-
-    private fun displayName(tree: Uri, docId: String): String =
-        querySingle(docUri(tree, docId), Document.COLUMN_DISPLAY_NAME)
-            ?: throw FileNotFoundException(docId)
-
-    private fun querySingle(uri: Uri, column: String): String? =
-        resolver.query(uri, arrayOf(column), null, null, null)?.use { c ->
-            if (c.moveToFirst() && !c.isNull(0)) c.getString(0) else null
-        }
-
-    private fun deleteQuietly(uri: Uri) {
+    private fun deleteQuietly(tree: DocTree, id: String) {
         try {
-            DocumentsContract.deleteDocument(resolver, uri)
-        } catch (_: Exception) {
+            tree.delete(id)
+        } catch (e: Exception) {
             // Best effort: an empty item folder in the trash is harmless.
+            Log.w(TAG, "Could not remove an empty trash folder", e)
         }
     }
 
-    private fun docUri(tree: Uri, docId: String): Uri =
-        DocumentsContract.buildDocumentUriUsingTree(tree, docId)
+    /**
+     * Android 14 refuses archive entries with `..` or a leading `/` by throwing,
+     * which would stop the whole unpacking. [ZipPaths] skips those entries instead.
+     */
+    private fun allowAnyZipEntryNames() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            dalvik.system.ZipPathValidator.clearCallback()
+        }
+    }
 
     private fun <T> run(executor: ExecutorService, result: MethodChannel.Result, work: () -> T) {
         executor.execute {
@@ -681,7 +759,7 @@ class StorageChannel(private val activity: Activity) : MethodChannel.MethodCallH
     private fun MethodCall.str(name: String): String =
         argument<String>(name) ?: throw IllegalArgumentException("Missing $name")
 
-    private fun MethodCall.tree(): Uri = Uri.parse(str("treeUri"))
+    private fun MethodCall.tree(): DocTree = treeFor(str("treeUri"))
 
     private class OpenPdf(val uri: Uri, val descriptor: ParcelFileDescriptor, val renderer: PdfRenderer)
 }

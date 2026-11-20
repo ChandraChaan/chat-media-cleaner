@@ -24,6 +24,7 @@ final class TestApp {
        ),
        trashStore = MemoryTrashIndexStore(trash),
        positions = MemoryPlaybackPositionStore(),
+       places = MemoryPlacesStore(),
        now = now ?? DateTime.utc(2026, 10, 27, 12) {
     for (final source in sources) {
       this.storage.grant(source.treeUri, source.rootId);
@@ -34,6 +35,7 @@ final class TestApp {
   final MemorySettingsStore settings;
   final MemoryTrashIndexStore trashStore;
   final MemoryPlaybackPositionStore positions;
+  final MemoryPlacesStore places;
   DateTime now;
 
   Widget build() => ProviderScope(
@@ -41,6 +43,8 @@ final class TestApp {
       mediaStorageProvider.overrideWithValue(storage),
       mediaViewerProvider.overrideWithValue(storage),
       folderAccessProvider.overrideWithValue(storage),
+      allFilesAccessProvider.overrideWithValue(storage),
+      placesStoreProvider.overrideWithValue(places),
       screenControlProvider.overrideWithValue(storage),
       playbackPositionStoreProvider.overrideWithValue(positions),
       settingsStoreProvider.overrideWithValue(settings),
