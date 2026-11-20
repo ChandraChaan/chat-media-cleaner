@@ -13,7 +13,7 @@ import '../domain/app_settings.dart';
 import 'settings_controller.dart';
 
 /// App version shown in About; keep in step with pubspec.yaml.
-const appVersion = '1.1.0';
+const appVersion = '1.2.0';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

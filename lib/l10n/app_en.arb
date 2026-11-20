@@ -658,7 +658,7 @@
   "categoryArchives": "Archives",
   "categoryApps": "Apps (APK)",
   "categoryOther": "Other",
-  "chosenFoldersTitle": "Folders you chose",
+  "chosenFoldersTitle": "Your folders",
   "clearRecent": "Clear recent files",
   "clipboardCopyHint": "{count, plural, =1{1 item to copy.} other{{count} items to copy.}} Open a folder and tap Paste here.",
   "@clipboardCopyHint": {

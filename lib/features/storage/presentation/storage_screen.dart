@@ -44,7 +44,11 @@ class StorageScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            for (final volume in volumes) VolumeUsageCard(volume: volume),
+            for (final volume in volumes)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: VolumeUsageCard(volume: volume),
+              ),
             if (report == null)
               const StorageScanCard()
             else

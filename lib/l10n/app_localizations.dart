@@ -1525,7 +1525,7 @@ abstract class AppLocalizations {
   /// No description provided for @chosenFoldersTitle.
   ///
   /// In en, this message translates to:
-  /// **'Folders you chose'**
+  /// **'Your folders'**
   String get chosenFoldersTitle;
 
   /// No description provided for @clearRecent.

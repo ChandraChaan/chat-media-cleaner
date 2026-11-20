@@ -1014,7 +1014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryOther => 'Other';
 
   @override
-  String get chosenFoldersTitle => 'Folders you chose';
+  String get chosenFoldersTitle => 'Your folders';
 
   @override
   String get clearRecent => 'Clear recent files';
