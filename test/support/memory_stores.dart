@@ -1,3 +1,4 @@
+import 'package:chat_media_cleaner/features/places/domain/places.dart';
 import 'package:chat_media_cleaner/features/settings/domain/app_settings.dart';
 import 'package:chat_media_cleaner/features/trash/domain/trash_entry.dart';
 import 'package:chat_media_cleaner/features/trash/domain/trash_repository.dart';
@@ -46,4 +47,16 @@ final class MemoryPlaybackPositionStore implements PlaybackPositionStore {
   @override
   Future<void> save(Map<String, int> positions) async =>
       this.positions = {...positions};
+}
+
+final class MemoryPlacesStore implements PlacesStore {
+  MemoryPlacesStore([this.places = Places.empty]);
+
+  Places places;
+
+  @override
+  Future<Places> load() async => places;
+
+  @override
+  Future<void> save(Places places) async => this.places = places;
 }

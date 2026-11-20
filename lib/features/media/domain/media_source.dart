@@ -3,22 +3,40 @@ import 'media_storage.dart';
 /// Which chat app a media folder belongs to.
 enum ChatApp { whatsapp, whatsappBusiness, other }
 
-/// A granted chat media folder: the `Media` folder of one app.
+/// A folder the app can work in: the `Media` folder of a chat app, another
+/// folder the user chose, or (with all-files access) a whole storage
+/// volume.
 final class MediaSource {
   const MediaSource({
     required this.treeUri,
     required this.rootId,
     required this.app,
+    this.displayName,
   });
 
-  /// The persisted folder grant. Unique, so it doubles as the source id.
+  /// The whole of a storage volume, browsed with all-files access.
+  MediaSource.volume(StorageVolume volume)
+    : treeUri = fileTreeUri(volume.path),
+      rootId = volume.path,
+      app = ChatApp.other,
+      displayName = volume.label;
+
+  /// The persisted folder grant, or a [fileTreeUri] for a folder reached
+  /// with all-files access. Unique, so it doubles as the source id.
   final String treeUri;
 
   /// Document id of the `Media` folder (the grant may be a parent of it).
   final String rootId;
   final ChatApp app;
 
+  /// A name to show instead of the folder's own, for storage volumes.
+  final String? displayName;
+
   String get id => treeUri;
+
+  /// Whether the source is reached through all-files access rather than a
+  /// folder grant.
+  bool get isFileSystem => isFileTree(treeUri);
 
   /// The name of the folder itself, for folders that belong to no known app.
   String get folderName {
@@ -31,12 +49,14 @@ final class MediaSource {
     'treeUri': treeUri,
     'rootId': rootId,
     'app': app.name,
+    'displayName': ?displayName,
   };
 
   static MediaSource fromJson(Map<String, Object?> json) => MediaSource(
     treeUri: json['treeUri']! as String,
     rootId: json['rootId']! as String,
     app: ChatApp.values.asNameMap()[json['app']] ?? ChatApp.other,
+    displayName: json['displayName'] as String?,
   );
 
   @override
@@ -44,10 +64,11 @@ final class MediaSource {
       other is MediaSource &&
       other.treeUri == treeUri &&
       other.rootId == rootId &&
-      other.app == app;
+      other.app == app &&
+      other.displayName == displayName;
 
   @override
-  int get hashCode => Object.hash(treeUri, rootId, app);
+  int get hashCode => Object.hash(treeUri, rootId, app, displayName);
 }
 
 /// The folder picked does not contain chat media.
@@ -89,8 +110,10 @@ abstract final class SourceLocator {
     return '$primaryVolume:$path';
   }
 
-  /// The path part of a `volume:path` document id.
+  /// The path part of a `volume:path` document id. An absolute path (the
+  /// id of a file in a file tree) is returned as it is.
   static String pathOf(String docId) {
+    if (docId.startsWith('/')) return docId;
     final colon = docId.indexOf(':');
     return colon < 0 ? docId : docId.substring(colon + 1);
   }
@@ -154,6 +177,29 @@ abstract final class SourceLocator {
       ];
     }
     throw NotAChatMediaFolder(path);
+  }
+
+  /// Finds the chat media folders on the storage volume at [volumePath],
+  /// through all-files access. Each one becomes a file-tree source of its
+  /// own. The Android 11 location wins over the old one when both exist.
+  static Future<List<MediaSource>> findOnVolume(
+    MediaStorage storage,
+    String volumePath,
+  ) async {
+    final tree = fileTreeUri(volumePath);
+    final found = <MediaSource>[];
+    for (final app in [ChatApp.whatsapp, ChatApp.whatsappBusiness]) {
+      for (final path in [_modern[app]!, _legacy[app]!]) {
+        final id = await _descend(storage, tree, volumePath, path.split('/'));
+        if (id != null) {
+          found.add(
+            MediaSource(treeUri: fileTreeUri(id), rootId: id, app: app),
+          );
+          break;
+        }
+      }
+    }
+    return found;
   }
 
   /// If both the modern and the legacy folder of an app are inside the

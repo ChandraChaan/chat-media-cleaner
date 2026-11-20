@@ -8,10 +8,10 @@ import '../../../app/widgets.dart';
 import '../../../core/format.dart';
 import '../../../core/l10n.dart';
 import '../../../core/media_labels.dart';
+import '../../access/presentation/storage_access_controller.dart';
 import '../../media/domain/media_file.dart';
 import '../../media/domain/media_storage.dart';
 import '../../review/presentation/review_controller.dart';
-import '../../settings/presentation/settings_controller.dart';
 import '../domain/share_mime.dart';
 import 'viewer_controller.dart';
 
@@ -85,8 +85,8 @@ class _DetailsSheet extends ConsumerWidget {
     final l10n = context.l10n;
     final locale = context.localeName;
     final source = ref.watch(
-      settingsControllerProvider.select(
-        (s) => s.value?.sources.where((x) => x.id == file.sourceId).firstOrNull,
+      knownSourcesProvider.select(
+        (all) => all.where((x) => x.id == file.sourceId).firstOrNull,
       ),
     );
     final info = ref.watch(mediaInfoProvider(file.ref)).value;

@@ -6,11 +6,11 @@
 ![Android 8+](https://img.shields.io/badge/Android-8.0%2B-3DDC84)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**See which WhatsApp photos, videos and voice notes are filling your phone, look through them, and clear them safely.**
+**A file manager for your whole phone, and a cleaner for the WhatsApp photos, videos and voice notes that fill it up.**
 
 Chat Media Cleaner scans the WhatsApp (and WhatsApp Business) media folder, shows what takes the most space, and groups the files you probably don't need: huge videos, the same meme saved five times, old forwards, copies of things you sent. You pick what goes. Deleted files wait in a trash for 7 days so you can change your mind.
 
-It is also a file manager for those folders: browse them, and open photos, videos, voice notes, PDFs and text files right in the app, with a full video player. No internet permission, no account, no ads.
+It is also a full file manager. With *All files access* it browses internal storage and memory cards; copies, moves, renames, compresses and extracts files and folders; shows what is using space; and finds large and duplicate files anywhere. Photos, videos, voice notes, PDFs and text files open right in the app, with a full video player. No internet permission, no account, no ads.
 
 <p align="center">
   <img src="docs/screenshots/01_home.png" alt="Home screen: chat media split by type, with Largest files, Exact duplicates, Old forwards and memes, and Sent media copies groups" width="200">
@@ -41,9 +41,30 @@ Open the file on your phone and allow installing from your browser or file manag
 4. Delete them right away to free the space, or leave them in the trash. Anything still there after 7 days (you can pick 1 to 30) is deleted for good the next time you open the app.
 5. Open the **Files** tab to browse the folder yourself and open anything in it.
 
+## File manager
+
+With **All files access** (Android asks once, on its own settings screen) the **Files** tab shows:
+
+- **Internal storage and memory cards**, with how full each one is. Open one to browse it folder by folder;
+- **Your folders**: the chat folders the app found or you chose;
+- **Recent files** you opened and **favourites** (star any file or folder);
+- **Kinds of files**: every image, video, audio file, document, archive or APK on the phone;
+- **Storage**: space by kind of file, the largest files and exact duplicates anywhere on the phone (the oldest copy is always kept).
+
+In any folder you can also:
+
+- **copy** or **move** files and whole folders: pick them, open another folder, tap **Paste here** (or **Move here**);
+- make a **new folder**, **compress** a selection into a ZIP, **extract** a ZIP next to itself;
+- **filter** by kind of file, **show hidden files**, and **search this folder and every sub-folder**;
+- see a folder's **details** (size, files and folders inside).
+
+Deleting always goes through the app's trash, with **Undo** right away.
+
+Without All files access everything above works in the folders you choose with Android's folder picker.
+
 ## Browse and open files
 
-The **Files** tab shows every folder you chose. Inside one you can:
+Inside a folder you can:
 
 - walk through sub-folders (the path at the top takes you back up), **search** by name, **sort** by name, date or size, and switch between a list and a grid of pictures;
 - see how many files each folder holds and how big it is, once you have scanned;
@@ -84,15 +105,20 @@ Buttons: previous and next file, **lock** (so a pocket or a child can't touch an
 | **Sent media copies** | Files in WhatsApp's `Sent` folders: copies of media you sent, whose originals usually stay in your gallery. |
 | **By type** | Every file of one type, for example all statuses or all documents. |
 
-## Why it asks for a folder
+## Folder access and All files access
 
-Since Android 11, an app can't read another app's media folder on its own. Instead of asking for *All files access*, Chat Media Cleaner uses Android's own folder picker (the Storage Access Framework): you choose `Android/media/com.whatsapp/WhatsApp/Media` once, and the app gets access to **that folder only**. You can take the access back any time in the app's Settings or in Android's settings.
+There are two ways in, and you choose:
+
+- **All files access** (`MANAGE_EXTERNAL_STORAGE` on Android 11 and newer; the storage permission on Android 8–10). Needed to use the app as a file manager for your whole phone. The WhatsApp folders are then found for you. You can turn it off any time in Android's settings for the app; the app then falls back to the folders you picked.
+- **One folder at a time** with Android's own folder picker (the Storage Access Framework): you choose `Android/media/com.whatsapp/WhatsApp/Media` once, and the app gets access to **that folder only**. You can take the access back any time in the app's Settings or in Android's settings.
+
+Even with All files access, Android keeps other apps' private folders (`Android/data`, `Android/obb`) closed; the app says so when you open one.
 
 On Android 10 and older the folder is `WhatsApp/Media` at the top of your storage; the app accepts that layout too, and the WhatsApp Business folder (`com.whatsapp.w4b`).
 
 **Choose another folder** adds any other folder the same way, for example Telegram, Download or Camera. Everything works there too, except that "Old forwards and memes" only ever lists files from chat app folders: an old photo in your camera folder is more likely one you took.
 
-The app has **no permissions at all** in its manifest: no storage permission, no `MANAGE_EXTERNAL_STORAGE`, no internet.
+The manifest asks for `MANAGE_EXTERNAL_STORAGE`, and for `READ_`/`WRITE_EXTERNAL_STORAGE` only up to Android 10 (`maxSdkVersion="29"`). It has no internet permission.
 
 ## Privacy
 
@@ -124,14 +150,17 @@ Flutter app with a small Kotlin layer for folder access. Pull requests are welco
 
 | Layer | What it does |
 | --- | --- |
-| [`StorageChannel.kt`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/StorageChannel.kt) | Storage Access Framework on background threads: folder picker with a persisted grant, listing folders (`DocumentsContract` queries), streaming SHA-256 of a file, thumbnails (provider thumbnail, video frame or sampled decode), moving files into and out of the trash (`moveDocument`, so no copying), renaming, sharing and opening a file in another app. Also PDF pages (`PdfRenderer`), picture size and length of media, saving a video frame, and the window brightness and media volume for the player. |
+| [`DocTree`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/DocTree.kt) | One interface over two kinds of folder: Storage Access Framework grants ([`SafTree`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/SafTree.kt)) and plain files reached with All files access ([`FsTree`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/FsTree.kt)), told apart by a `file://` tree URI whose ids are absolute paths. [`FileOps`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/FileOps.kt) copies, moves, deletes, measures, zips and unzips on either (zip-slip safe); [`FilesProvider`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/FilesProvider.kt) serves files read-only to the player and to apps you share with. |
+| [`StorageChannel.kt`](android/app/src/main/kotlin/dev/chandra/chat_media_cleaner/storage/StorageChannel.kt) | All of the above on background threads, plus folder picker with a persisted grant, listing folders (`DocumentsContract` queries), streaming SHA-256 of a file, thumbnails (provider thumbnail, video frame or sampled decode), moving files into and out of the trash (`moveDocument`, so no copying), renaming, sharing and opening a file in another app. Also PDF pages (`PdfRenderer`), picture size and length of media, saving a video frame, and the window brightness and media volume for the player. |
 | [`MediaStorage`](lib/features/media/domain/media_storage.dart) | The Dart interface over that platform code; tests use an in-memory fake file tree. |
 | [`SourceLocator`](lib/features/media/domain/media_source.dart) | Knows the modern and legacy WhatsApp / WhatsApp Business paths, opens the picker in the right place and finds the `Media` folder inside whatever was picked. |
 | [`MediaScanner`](lib/features/media/domain/media_scanner.dart) | Walks the folder tree with progress and cancel, skipping the trash and `.nomedia` files. |
 | [`DuplicateFinder`](lib/features/media/domain/duplicate_finder.dart) | Groups files by size, hashes only those that share a size (SHA-256 in Kotlin, two at a time), groups by hash within each folder, keeps the oldest of each set. Sets are re-checked whenever files are trashed or restored, so one copy always stays. |
 | [`MediaClassifier`](lib/features/media/domain/media_type.dart) / [`MediaAnalyzer`](lib/features/media/domain/media_report.dart) | Type from the WhatsApp folder name (with a MIME fallback), totals by type, and the smart groups and age rule. |
 | [`TrashRepository`](lib/features/trash/domain/trash_repository.dart) | Trash bookkeeping: move, restore (with name clashes and missing folders), delete for good, expiry. The index is a JSON file in app storage. |
-| [`FolderListing` / `BrowseOrder`](lib/features/browse/domain/browse_entry.dart) | The Files tab: one folder's contents read live, ordered and searched, with folder totals taken from the last scan. |
+| [`FolderListing` / `BrowseOrder`](lib/features/browse/domain/browse_entry.dart) | The Files tab: one folder's contents read live, ordered, filtered by kind and searched, with folder totals taken from the last scan. [`FileSearch`](lib/features/browse/domain/file_search.dart) searches sub-folders. |
+| [`StorageReport`](lib/features/storage/domain/storage_report.dart) | Space by [kind of file](lib/features/storage/domain/file_category.dart), large files and duplicates across everything the app can read. |
+| [`Places`](lib/features/places/domain/places.dart) | Favourites and recent files, kept in SharedPreferences. |
 | [`ViewKinds`](lib/features/viewer/domain/view_kind.dart) | Decides from extension and MIME type whether a file is shown as a picture, video, sound, PDF or text. |
 | [`ViewerScreen`](lib/features/viewer/presentation/viewer_screen.dart) | One swipeable page per file. Video and audio play through [`video_player`](https://pub.dev/packages/video_player) (ExoPlayer) straight from the `content://` address; [`VideoControls`](lib/features/viewer/presentation/player_controls.dart) adds the gestures. |
 | [`PlaybackPositions`](lib/features/viewer/domain/playback_positions.dart) | Where each video was stopped, for the 200 most recent. |

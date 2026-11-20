@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get promiseOnlyFolder =>
-      'Only the folders you choose. Nothing else on your phone.';
+      'A folder you choose is the only one the app can open, unless you allow all files.';
 
   @override
   String get promiseOffline =>
@@ -610,7 +610,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filesIntro =>
-      'Browse the folders you chose, open anything right here, and share, rename or delete files.';
+      'Browse the folders you chose, open anything right here, and copy, move, rename, compress or delete files.';
 
   @override
   String get chooseOtherFolder => 'Choose another folder';
@@ -917,5 +917,426 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String percent(int value) {
     return '$value%';
+  }
+
+  @override
+  String get accessFolderOption => 'Or choose one folder';
+
+  @override
+  String get actionCompress => 'Compress';
+
+  @override
+  String get actionCopy => 'Copy';
+
+  @override
+  String get actionCreate => 'Create';
+
+  @override
+  String get actionExtract => 'Extract here';
+
+  @override
+  String get actionMove => 'Move';
+
+  @override
+  String get actionUndo => 'Undo';
+
+  @override
+  String get addFavourite => 'Add to favourites';
+
+  @override
+  String get removeFavourite => 'Remove from favourites';
+
+  @override
+  String get allFilesTitle => 'Browse all your files';
+
+  @override
+  String get allFilesBody =>
+      'Allow access to all files to use Chat Media Cleaner as a file manager: browse your whole phone and memory card, copy, move, compress and clean up anything. Files stay on your phone; the app has no internet permission.';
+
+  @override
+  String get allFilesAccessBody =>
+      'Use the app as a full file manager for your phone and memory card. Your chat apps\' media folders are then found for you, with no folder picking. Nothing leaves your phone.';
+
+  @override
+  String get allFilesWithout =>
+      'Without it, the app works in the folders you choose.';
+
+  @override
+  String get allowAllFiles => 'Allow access to all files';
+
+  @override
+  String get allFilesOn => 'All files access is on.';
+
+  @override
+  String get allFilesDeclined =>
+      'All files access is off. You can still work in the folders you choose.';
+
+  @override
+  String get allFilesGranted =>
+      'All files access is on. Your storage is in the Files tab.';
+
+  @override
+  String get allFilesSetting => 'All files access';
+
+  @override
+  String get allFilesSettingOn =>
+      'On. To turn it off, use Android\'s settings for this app.';
+
+  @override
+  String get allFilesSettingOff =>
+      'Off. Tap to allow it and browse your whole phone.';
+
+  @override
+  String get archiveDefaultName => 'Archive';
+
+  @override
+  String get categoriesTitle => 'Kinds of files';
+
+  @override
+  String get categoryImages => 'Images';
+
+  @override
+  String get categoryVideos => 'Videos';
+
+  @override
+  String get categoryAudio => 'Audio';
+
+  @override
+  String get categoryDocuments => 'Documents';
+
+  @override
+  String get categoryArchives => 'Archives';
+
+  @override
+  String get categoryApps => 'Apps (APK)';
+
+  @override
+  String get categoryOther => 'Other';
+
+  @override
+  String get chosenFoldersTitle => 'Your folders';
+
+  @override
+  String get clearRecent => 'Clear recent files';
+
+  @override
+  String clipboardCopyHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items to copy.',
+      one: '1 item to copy.',
+    );
+    return '$_temp0 Open a folder and tap Paste here.';
+  }
+
+  @override
+  String clipboardMoveHint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items to move.',
+      one: '1 item to move.',
+    );
+    return '$_temp0 Open a folder and tap Move here.';
+  }
+
+  @override
+  String clipboardCopyCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted items to copy',
+      one: '1 item to copy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String clipboardMoveCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted items to move',
+      one: '1 item to move',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String compressTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Compress $count items',
+      one: 'Compress 1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String compressed(String name) {
+    return 'Saved $name.';
+  }
+
+  @override
+  String get detailContains => 'Contains';
+
+  @override
+  String get detailTypeFolder => 'Folder';
+
+  @override
+  String get duplicateFilesTitle => 'Duplicate files';
+
+  @override
+  String duplicatesSummary(int count, String formatted, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted extra copies · $size',
+      one: '1 extra copy · $size',
+      zero: 'No extra copies',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get extracting => 'Extracting…';
+
+  @override
+  String extracted(String name) {
+    return 'Extracted into $name.';
+  }
+
+  @override
+  String get extractFailed =>
+      'Couldn\'t extract that archive. It may be damaged or protected by a password.';
+
+  @override
+  String favouriteAdded(String name) {
+    return 'Added $name to favourites.';
+  }
+
+  @override
+  String favouriteRemoved(String name) {
+    return 'Removed $name from favourites.';
+  }
+
+  @override
+  String get favouritesTitle => 'Favourites';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get findChatFolders => 'Find chat folders';
+
+  @override
+  String folderContents(
+    int files,
+    String filesFormatted,
+    int folders,
+    String foldersFormatted,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      files,
+      locale: localeName,
+      other: '$filesFormatted files',
+      one: '1 file',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      folders,
+      locale: localeName,
+      other: '$foldersFormatted folders',
+      one: '1 folder',
+    );
+    return '$_temp0, $_temp1';
+  }
+
+  @override
+  String folderCreated(String name) {
+    return 'Created $name.';
+  }
+
+  @override
+  String get folderSizeUnknown => 'Couldn\'t be measured';
+
+  @override
+  String get internalStorage => 'Internal storage';
+
+  @override
+  String get largeFilesTitle => 'Large files';
+
+  @override
+  String get listEmpty => 'Nothing here.';
+
+  @override
+  String listSummary(int count, String formatted, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted files',
+      one: '1 file',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String get measuring => 'Measuring…';
+
+  @override
+  String get moreActions => 'More';
+
+  @override
+  String get pasteHere => 'Paste here';
+
+  @override
+  String get moveHere => 'Move here';
+
+  @override
+  String movedToTrashUndo(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Moved $formatted items to the trash.',
+      one: 'Moved 1 item to the trash.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get newFolderTitle => 'New folder';
+
+  @override
+  String get newFolderDefaultName => 'New folder';
+
+  @override
+  String get noChatFoldersTitle => 'No chat folders yet';
+
+  @override
+  String get noChatFoldersBody =>
+      'Chat Media Cleaner finds large, duplicate and old WhatsApp media. Find the folders on your phone, or add one with the button above.';
+
+  @override
+  String get noChatFoldersFound =>
+      'No WhatsApp media folders were found. Add a folder with Add folder.';
+
+  @override
+  String get noDuplicates => 'No duplicate files found.';
+
+  @override
+  String pasteFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items couldn\'t be done.',
+      one: '1 item couldn\'t be done.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pasteIntoItself =>
+      'A folder can\'t go inside itself. Open another folder.';
+
+  @override
+  String pasteProgress(int done, int total) {
+    return '$done of $total';
+  }
+
+  @override
+  String pastedCopies(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Copied $formatted items.',
+      one: 'Copied 1 item.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pastedMoves(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Moved $formatted items.',
+      one: 'Moved 1 item.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get placeUnavailable =>
+      'Not available: the app can\'t reach this folder any more.';
+
+  @override
+  String get recentTitle => 'Recent files';
+
+  @override
+  String get recentEmpty => 'Files you open in the app show up here.';
+
+  @override
+  String get searchDeepHint => 'Search here and in sub-folders';
+
+  @override
+  String get searchSubfolders => 'Search sub-folders too';
+
+  @override
+  String get searchHereOnly => 'Search this folder only';
+
+  @override
+  String get seeAll => 'See all';
+
+  @override
+  String get showHiddenFiles => 'Show hidden files';
+
+  @override
+  String get storageTitle => 'Storage';
+
+  @override
+  String get storageSubtitle =>
+      'What\'s using space, large files and duplicates';
+
+  @override
+  String storageByType(String size) {
+    return 'By kind of file · $size';
+  }
+
+  @override
+  String get storageCleanUp => 'Clean up';
+
+  @override
+  String get storageScanTitle => 'See what\'s using space';
+
+  @override
+  String get storageScanBodyAll =>
+      'Scanning reads file names and sizes across your storage, then compares files of the same size to find duplicates. Nothing leaves your phone.';
+
+  @override
+  String get storageScanBodyFolders =>
+      'Scanning reads file names and sizes in the folders you chose. Allow access to all files to scan your whole phone.';
+
+  @override
+  String get storageScanning => 'Looking through your storage…';
+
+  @override
+  String get storageSkipped =>
+      'Some folders can\'t be read by any app (for example other apps\' private data) and are not included.';
+
+  @override
+  String get toolsTitle => 'Tools';
+
+  @override
+  String volumeUsage(String used, String total) {
+    return '$used of $total used';
+  }
+
+  @override
+  String volumeFree(String free) {
+    return '$free free';
   }
 }

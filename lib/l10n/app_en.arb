@@ -9,7 +9,7 @@
   "accessStep1": "Tap Choose WhatsApp folder below.",
   "accessStep2": "Android's file picker opens at Android › media › com.whatsapp › WhatsApp › Media.",
   "accessStep3": "Tap Use this folder, then Allow.",
-  "promiseOnlyFolder": "Only the folders you choose. Nothing else on your phone.",
+  "promiseOnlyFolder": "A folder you choose is the only one the app can open, unless you allow all files.",
   "promiseOffline": "No internet permission: nothing ever leaves your phone.",
   "promiseReview": "Nothing is deleted until you select files and confirm.",
   "promiseTrash": "Deleted files wait in the app's trash first, so you can restore them.",
@@ -393,7 +393,7 @@
   "tabClean": "Clean up",
   "tabFiles": "Files",
   "filesTitle": "Files",
-  "filesIntro": "Browse the folders you chose, open anything right here, and share, rename or delete files.",
+  "filesIntro": "Browse the folders you chose, open anything right here, and copy, move, rename, compress or delete files.",
   "chooseOtherFolder": "Choose another folder",
   "accessOtherHint": "Other folders work too, for example Telegram, Download or Camera: tap Choose another folder and pick one.",
   "folderStats": "{count, plural, =1{1 file} other{{formatted} files}} · {size}",
@@ -626,6 +626,288 @@
     "placeholders": {
       "value": {
         "type": "int"
+      }
+    }
+  },
+  "accessFolderOption": "Or choose one folder",
+  "actionCompress": "Compress",
+  "actionCopy": "Copy",
+  "actionCreate": "Create",
+  "actionExtract": "Extract here",
+  "actionMove": "Move",
+  "actionUndo": "Undo",
+  "addFavourite": "Add to favourites",
+  "removeFavourite": "Remove from favourites",
+  "allFilesTitle": "Browse all your files",
+  "allFilesBody": "Allow access to all files to use Chat Media Cleaner as a file manager: browse your whole phone and memory card, copy, move, compress and clean up anything. Files stay on your phone; the app has no internet permission.",
+  "allFilesAccessBody": "Use the app as a full file manager for your phone and memory card. Your chat apps' media folders are then found for you, with no folder picking. Nothing leaves your phone.",
+  "allFilesWithout": "Without it, the app works in the folders you choose.",
+  "allowAllFiles": "Allow access to all files",
+  "allFilesOn": "All files access is on.",
+  "allFilesDeclined": "All files access is off. You can still work in the folders you choose.",
+  "allFilesGranted": "All files access is on. Your storage is in the Files tab.",
+  "allFilesSetting": "All files access",
+  "allFilesSettingOn": "On. To turn it off, use Android's settings for this app.",
+  "allFilesSettingOff": "Off. Tap to allow it and browse your whole phone.",
+  "archiveDefaultName": "Archive",
+  "categoriesTitle": "Kinds of files",
+  "categoryImages": "Images",
+  "categoryVideos": "Videos",
+  "categoryAudio": "Audio",
+  "categoryDocuments": "Documents",
+  "categoryArchives": "Archives",
+  "categoryApps": "Apps (APK)",
+  "categoryOther": "Other",
+  "chosenFoldersTitle": "Your folders",
+  "clearRecent": "Clear recent files",
+  "clipboardCopyHint": "{count, plural, =1{1 item to copy.} other{{count} items to copy.}} Open a folder and tap Paste here.",
+  "@clipboardCopyHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipboardMoveHint": "{count, plural, =1{1 item to move.} other{{count} items to move.}} Open a folder and tap Move here.",
+  "@clipboardMoveHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipboardCopyCount": "{count, plural, =1{1 item to copy} other{{formatted} items to copy}}",
+  "@clipboardCopyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "clipboardMoveCount": "{count, plural, =1{1 item to move} other{{formatted} items to move}}",
+  "@clipboardMoveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "compressTitle": "{count, plural, =1{Compress 1 item} other{Compress {count} items}}",
+  "@compressTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compressed": "Saved {name}.",
+  "@compressed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "detailContains": "Contains",
+  "detailTypeFolder": "Folder",
+  "duplicateFilesTitle": "Duplicate files",
+  "duplicatesSummary": "{count, plural, =0{No extra copies} =1{1 extra copy · {size}} other{{formatted} extra copies · {size}}}",
+  "@duplicatesSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "extracting": "Extracting…",
+  "extracted": "Extracted into {name}.",
+  "@extracted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "extractFailed": "Couldn't extract that archive. It may be damaged or protected by a password.",
+  "favouriteAdded": "Added {name} to favourites.",
+  "@favouriteAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "favouriteRemoved": "Removed {name} from favourites.",
+  "@favouriteRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "favouritesTitle": "Favourites",
+  "filterAll": "All",
+  "findChatFolders": "Find chat folders",
+  "folderContents": "{files, plural, =1{1 file} other{{filesFormatted} files}}, {folders, plural, =1{1 folder} other{{foldersFormatted} folders}}",
+  "@folderContents": {
+    "placeholders": {
+      "files": {
+        "type": "int"
+      },
+      "filesFormatted": {
+        "type": "String"
+      },
+      "folders": {
+        "type": "int"
+      },
+      "foldersFormatted": {
+        "type": "String"
+      }
+    }
+  },
+  "folderCreated": "Created {name}.",
+  "@folderCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "folderSizeUnknown": "Couldn't be measured",
+  "internalStorage": "Internal storage",
+  "largeFilesTitle": "Large files",
+  "listEmpty": "Nothing here.",
+  "listSummary": "{count, plural, =1{1 file} other{{formatted} files}} · {size}",
+  "@listSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "measuring": "Measuring…",
+  "moreActions": "More",
+  "pasteHere": "Paste here",
+  "moveHere": "Move here",
+  "movedToTrashUndo": "{count, plural, =1{Moved 1 item to the trash.} other{Moved {formatted} items to the trash.}}",
+  "@movedToTrashUndo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "nameLabel": "Name",
+  "newFolderTitle": "New folder",
+  "newFolderDefaultName": "New folder",
+  "noChatFoldersTitle": "No chat folders yet",
+  "noChatFoldersBody": "Chat Media Cleaner finds large, duplicate and old WhatsApp media. Find the folders on your phone, or add one with the button above.",
+  "noChatFoldersFound": "No WhatsApp media folders were found. Add a folder with Add folder.",
+  "noDuplicates": "No duplicate files found.",
+  "pasteFailed": "{count, plural, =1{1 item couldn't be done.} other{{count} items couldn't be done.}}",
+  "@pasteFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pasteIntoItself": "A folder can't go inside itself. Open another folder.",
+  "pasteProgress": "{done} of {total}",
+  "@pasteProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "pastedCopies": "{count, plural, =1{Copied 1 item.} other{Copied {formatted} items.}}",
+  "@pastedCopies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "pastedMoves": "{count, plural, =1{Moved 1 item.} other{Moved {formatted} items.}}",
+  "@pastedMoves": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "formatted": {
+        "type": "String"
+      }
+    }
+  },
+  "placeUnavailable": "Not available: the app can't reach this folder any more.",
+  "recentTitle": "Recent files",
+  "recentEmpty": "Files you open in the app show up here.",
+  "searchDeepHint": "Search here and in sub-folders",
+  "searchSubfolders": "Search sub-folders too",
+  "searchHereOnly": "Search this folder only",
+  "seeAll": "See all",
+  "showHiddenFiles": "Show hidden files",
+  "storageTitle": "Storage",
+  "storageSubtitle": "What's using space, large files and duplicates",
+  "storageByType": "By kind of file · {size}",
+  "@storageByType": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "storageCleanUp": "Clean up",
+  "storageScanTitle": "See what's using space",
+  "storageScanBodyAll": "Scanning reads file names and sizes across your storage, then compares files of the same size to find duplicates. Nothing leaves your phone.",
+  "storageScanBodyFolders": "Scanning reads file names and sizes in the folders you chose. Allow access to all files to scan your whole phone.",
+  "storageScanning": "Looking through your storage…",
+  "storageSkipped": "Some folders can't be read by any app (for example other apps' private data) and are not included.",
+  "toolsTitle": "Tools",
+  "volumeUsage": "{used} of {total} used",
+  "@volumeUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "volumeFree": "{free} free",
+  "@volumeFree": {
+    "placeholders": {
+      "free": {
+        "type": "String"
       }
     }
   }

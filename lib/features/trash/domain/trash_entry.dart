@@ -64,6 +64,9 @@ final class TrashEntry {
   final bool isSent;
   final String? mimeType;
 
+  /// Whether a whole folder was trashed rather than one file.
+  bool get isFolder => mimeType == MediaFile.folderMimeType;
+
   /// The [MediaFile.key] the file had before it was trashed.
   String get originalKey => '$sourceId|$originalId';
 

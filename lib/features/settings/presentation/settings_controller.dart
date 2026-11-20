@@ -38,11 +38,15 @@ final class SettingsController extends AsyncNotifier<AppSettings> {
   Future<AppSettings> build() async {
     final settings = await ref.read(settingsStoreProvider).load();
     // Drop folders whose access was removed outside the app (for example in
-    // system settings); the user is asked to choose them again.
+    // system settings); the user is asked to choose them again. Folders
+    // found through all-files access stay while that access does.
     final granted = (await ref.read(folderAccessProvider).grantedFolders())
         .toSet();
+    final allFiles =
+        settings.sources.any((s) => s.isFileSystem) &&
+        await _hasAllFilesAccess();
     final kept = settings.sources
-        .where((s) => granted.contains(s.treeUri))
+        .where((s) => s.isFileSystem ? allFiles : granted.contains(s.treeUri))
         .toList();
     if (kept.length == settings.sources.length) return settings;
     final updated = settings.copyWith(sources: kept);
@@ -100,6 +104,43 @@ final class SettingsController extends AsyncNotifier<AppSettings> {
     return FolderAdded(found);
   }
 
+  /// Looks for the chat apps' media folders on every storage volume,
+  /// through all-files access, and adds the ones found. Folders already
+  /// chosen for the same app are kept.
+  Future<AddFolderResult> addDetectedFolders() async {
+    final found = <MediaSource>[];
+    try {
+      final storage = ref.read(mediaStorageProvider);
+      final volumes = await ref.read(allFilesAccessProvider).storageVolumes();
+      for (final volume in volumes) {
+        found.addAll(await SourceLocator.findOnVolume(storage, volume.path));
+      }
+    } on StorageException {
+      return const FolderPickFailed();
+    }
+    final current = await future;
+    final apps = {for (final s in current.sources) s.app};
+    final added = [
+      for (final s in found)
+        if (apps.add(s.app)) s,
+    ];
+    if (added.isEmpty) {
+      return found.isEmpty ? const FolderNotChatMedia() : const FolderAdded([]);
+    }
+    final sources = [...current.sources, ...added]
+      ..sort((a, b) => a.app.index.compareTo(b.app.index));
+    await _save(current.copyWith(sources: sources));
+    return FolderAdded(added);
+  }
+
+  Future<bool> _hasAllFilesAccess() async {
+    try {
+      return await ref.read(allFilesAccessProvider).hasAllFilesAccess();
+    } on StorageException {
+      return false;
+    }
+  }
+
   Future<void> removeSource(MediaSource source) async {
     final current = await future;
     final updated = current.copyWith(
@@ -128,6 +169,7 @@ final class SettingsController extends AsyncNotifier<AppSettings> {
   }
 
   Future<void> _releaseIfUnused(String treeUri, AppSettings settings) async {
+    if (isFileTree(treeUri)) return;
     if (settings.sources.any((s) => s.treeUri == treeUri)) return;
     await ref.read(folderAccessProvider).releaseFolder(treeUri);
   }

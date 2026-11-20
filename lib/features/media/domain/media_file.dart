@@ -1,10 +1,13 @@
 import 'media_type.dart';
 
-/// One file found in a chat app's media folder.
+/// One file found in a chat app's media folder or anywhere in storage. A
+/// folder that is being copied, moved or trashed is one too, with
+/// [mimeType] [folderMimeType] (see [isFolder]).
 ///
 /// [id] and [parentId] are opaque storage ids (Storage Access Framework
-/// document ids on Android). [relativePath] is the path below the `Media`
-/// folder, for example `WhatsApp Images/Sent/IMG-20240101-WA0001.jpg`.
+/// document ids, or absolute paths in a file tree). [relativePath] is the
+/// path below the source's root folder, for example
+/// `WhatsApp Images/Sent/IMG-20240101-WA0001.jpg`.
 final class MediaFile {
   const MediaFile({
     required this.id,
@@ -18,6 +21,9 @@ final class MediaFile {
     this.isSent = false,
     this.mimeType,
   });
+
+  /// What storage reports as the type of a folder.
+  static const folderMimeType = 'vnd.android.document/directory';
 
   final String id;
 
@@ -35,6 +41,8 @@ final class MediaFile {
   final MediaType type;
   final bool isSent;
   final String? mimeType;
+
+  bool get isFolder => mimeType == folderMimeType;
 
   /// Unique across all sources; use it for selection and list keys.
   String get key => '$sourceId|$id';

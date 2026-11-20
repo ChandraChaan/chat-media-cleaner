@@ -120,7 +120,26 @@ Future<Set<String>> moveToTrashFlow(
       ],
     ),
   );
-  if (deleteNow != true) return moved;
+  if (deleteNow != true) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.movedToTrashUndo(
+              result.done.length,
+              formatCount(result.done.length, locale),
+            ),
+          ),
+          action: SnackBarAction(
+            key: const Key('undo-trash'),
+            label: l10n.actionUndo,
+            onPressed: () => unawaited(trash.restore(result.done)),
+          ),
+        ),
+      );
+    return moved;
+  }
 
   final deleted = await trash.deleteForever(result.done);
   messenger.showSnackBar(

@@ -39,8 +39,44 @@ final onePixelPng = Uint8List.fromList(const [
 /// documents provider: document ids are `primary:<path>`, folders are
 /// created on demand, and access is limited to granted trees.
 class FakeMediaStorage
-    implements MediaStorage, MediaViewer, FolderAccess, ScreenControl {
+    implements
+        MediaStorage,
+        MediaViewer,
+        FolderAccess,
+        AllFilesAccess,
+        ScreenControl {
   FakeMediaStorage({this.sdk = 34});
+
+  /// Whether the app has all-files access: file trees ([fileTreeUri]) can
+  /// then reach any absolute path.
+  bool allFilesGranted = false;
+
+  /// What [requestAllFilesAccess] does to [allFilesGranted].
+  bool grantOnRequest = true;
+  int accessRequests = 0;
+
+  /// Volumes [storageVolumes] reports while access is granted.
+  final volumes = <StorageVolume>[];
+
+  /// Adds a storage volume at [path] (an absolute path) and its folder.
+  void addVolume(
+    String path, {
+    String label = 'Internal shared storage',
+    int totalBytes = 128 * 1000 * 1000 * 1000,
+    int freeBytes = 40 * 1000 * 1000 * 1000,
+  }) {
+    _ensureDir(path);
+    volumes.add(
+      StorageVolume(
+        path: path,
+        label: label,
+        isPrimary: volumes.isEmpty,
+        isRemovable: volumes.isNotEmpty,
+        totalBytes: totalBytes,
+        freeBytes: freeBytes,
+      ),
+    );
+  }
 
   int sdk;
   final _nodes = <String, _Node>{};
@@ -181,7 +217,7 @@ class FakeMediaStorage
     final itemDir = '$trash/$itemKey';
     _ensureDir(itemDir);
     final newId = '$itemDir/${_nameOf(fileId)}';
-    _nodes[newId] = _nodes.remove(fileId)!;
+    _moveTree(fileId, newId);
     return TrashedItem(itemDirId: itemDir, fileId: newId);
   }
 
@@ -201,7 +237,7 @@ class FakeMediaStorage
     final taken = {for (final id in _childrenOf(targetParentId)) _nameOf(id)};
     final name = _firstFree(_nameOf(item.fileId), taken);
     final newId = '$targetParentId/$name';
-    _nodes[newId] = _nodes.remove(item.fileId)!;
+    _moveTree(item.fileId, newId);
     delete(item.itemDirId);
     return RestoredFile(fileId: newId, name: name);
   }
@@ -213,6 +249,194 @@ class FakeMediaStorage
       throw StorageException(StorageError.notFound, itemDirId);
     }
     delete(itemDirId);
+  }
+
+  @override
+  Future<StoredItem> createFolder(
+    String treeUri, {
+    required String parentId,
+    required String name,
+  }) async {
+    _checkAccess(treeUri, parentId);
+    final id = '$parentId/$name';
+    if (_nodes.containsKey(id)) {
+      throw StorageException(StorageError.nameTaken, name);
+    }
+    _nodes[id] = const _Node(isDir: true);
+    return StoredItem(id: id, name: name);
+  }
+
+  /// Item ids whose copy or move fails.
+  final failCopies = <String>{};
+
+  @override
+  Future<StoredItem> copy(
+    String treeUri, {
+    required String id,
+    required String targetTreeUri,
+    required String targetParentId,
+  }) async {
+    _checkAccess(treeUri, id);
+    _checkAccess(targetTreeUri, targetParentId);
+    _checkTransfer(id, targetParentId);
+    final name = _freeNameIn(targetParentId, _nameOf(id));
+    final newId = '$targetParentId/$name';
+    for (final entry in [..._nodes.entries]) {
+      if (entry.key == id || entry.key.startsWith('$id/')) {
+        _nodes['$newId${entry.key.substring(id.length)}'] = entry.value;
+      }
+    }
+    return StoredItem(id: newId, name: name);
+  }
+
+  @override
+  Future<StoredItem> move(
+    String treeUri, {
+    required String id,
+    required String parentId,
+    required String targetTreeUri,
+    required String targetParentId,
+  }) async {
+    _checkAccess(treeUri, id);
+    _checkAccess(targetTreeUri, targetParentId);
+    if (parentId == targetParentId) {
+      return StoredItem(id: id, name: _nameOf(id));
+    }
+    _checkTransfer(id, targetParentId);
+    final name = _freeNameIn(targetParentId, _nameOf(id));
+    final newId = '$targetParentId/$name';
+    _moveTree(id, newId);
+    return StoredItem(id: newId, name: name);
+  }
+
+  @override
+  Future<void> deletePermanently(String treeUri, String id) async {
+    _checkAccess(treeUri, id);
+    if (!_nodes.containsKey(id)) {
+      throw StorageException(StorageError.notFound, id);
+    }
+    delete(id);
+  }
+
+  @override
+  Future<FolderSize> folderSize(String treeUri, String id) async {
+    _checkAccess(treeUri, id);
+    if (!_nodes.containsKey(id)) {
+      throw StorageException(StorageError.notFound, id);
+    }
+    var bytes = 0;
+    var files = 0;
+    var folders = 0;
+    for (final entry in _nodes.entries) {
+      if (entry.key != id && !entry.key.startsWith('$id/')) continue;
+      if (entry.value.isDir) {
+        if (entry.key != id) folders++;
+      } else {
+        files++;
+        bytes += entry.value.size;
+      }
+    }
+    return FolderSize(bytes: bytes, files: files, folders: folders);
+  }
+
+  @override
+  Future<StoredItem> zip(
+    String treeUri, {
+    required List<String> ids,
+    required String parentId,
+    required String name,
+  }) async {
+    _checkAccess(treeUri, parentId);
+    final entries = <String, String>{};
+    for (final id in ids) {
+      _checkAccess(treeUri, id);
+      final base = _parentOf(id);
+      for (final entry in _nodes.entries) {
+        if (entry.value.isDir) continue;
+        if (entry.key == id || entry.key.startsWith('$id/')) {
+          entries[entry.key.substring(base.length + 1)] = entry.value.content;
+        }
+      }
+    }
+    final free = _freeNameIn(parentId, name);
+    final content = 'zip:${jsonEncode(entries)}';
+    _nodes['$parentId/$free'] = _Node(
+      isDir: false,
+      size: content.length,
+      mime: 'application/zip',
+      content: content,
+    );
+    return StoredItem(id: '$parentId/$free', name: free);
+  }
+
+  @override
+  Future<StoredItem> unzip(
+    String treeUri, {
+    required String id,
+    required String parentId,
+  }) async {
+    _checkAccess(treeUri, id);
+    final node = _nodes[id];
+    if (node == null) throw StorageException(StorageError.notFound, id);
+    if (!node.content.startsWith('zip:')) {
+      throw StorageException(StorageError.unreadable, id);
+    }
+    final entries =
+        (jsonDecode(node.content.substring(4)) as Map<String, Object?>)
+            .cast<String, String>();
+    final stem = _nameOf(id).replaceFirst(RegExp(r'\.zip$'), '');
+    final folder = _freeNameIn(parentId, stem);
+    final folderId = '$parentId/$folder';
+    _ensureDir(folderId);
+    for (final MapEntry(:key, :value) in entries.entries) {
+      final fileId = '$folderId/$key';
+      _ensureDir(_parentOf(fileId));
+      _nodes[fileId] = _Node(
+        isDir: false,
+        size: value.length,
+        mime: _mimeFor(key),
+        content: value,
+      );
+    }
+    return StoredItem(id: folderId, name: folder);
+  }
+
+  @override
+  Future<bool> hasAllFilesAccess() async => allFilesGranted;
+
+  @override
+  Future<bool> requestAllFilesAccess() async {
+    accessRequests++;
+    if (grantOnRequest) allFilesGranted = true;
+    return allFilesGranted;
+  }
+
+  @override
+  Future<List<StorageVolume>> storageVolumes() async =>
+      allFilesGranted ? [...volumes] : const [];
+
+  void _checkTransfer(String id, String targetParentId) {
+    if (!_nodes.containsKey(id)) {
+      throw StorageException(StorageError.notFound, id);
+    }
+    if (failCopies.contains(id)) {
+      throw const StorageException(StorageError.failed, 'copy failed');
+    }
+    if (targetParentId == id || targetParentId.startsWith('$id/')) {
+      throw StorageException(StorageError.invalidTarget, id);
+    }
+  }
+
+  String _freeNameIn(String parentId, String name) =>
+      _firstFree(name, {for (final c in _childrenOf(parentId)) _nameOf(c)});
+
+  /// Moves a file, or a folder with everything in it, to [to].
+  void _moveTree(String from, String to) {
+    for (final key in [..._nodes.keys]) {
+      if (key == from || key.startsWith('$from/')) {
+        _nodes['$to${key.substring(from.length)}'] = _nodes.remove(key)!;
+      }
+    }
   }
 
   @override
@@ -258,7 +482,7 @@ class FakeMediaStorage
     if (_nodes.containsKey(newId)) {
       throw StorageException(StorageError.nameTaken, newName);
     }
-    _nodes[newId] = _nodes.remove(fileId)!;
+    _moveTree(fileId, newId);
     return newId;
   }
 
@@ -397,6 +621,12 @@ class FakeMediaStorage
   String contentOf(String id) => _nodes[id]!.content;
 
   void _checkAccess(String treeUri, String id) {
+    if (isFileTree(treeUri)) {
+      if (!allFilesGranted || !id.startsWith('/')) {
+        throw StorageException(StorageError.permissionLost, treeUri);
+      }
+      return;
+    }
     final root = _grants[treeUri];
     final below =
         root != null &&
@@ -409,7 +639,9 @@ class FakeMediaStorage
   void _ensureDir(String id) {
     if (_nodes[id]?.isDir ?? false) return;
     final parent = _parentOf(id);
-    if (parent != id && parent.contains(':') && !parent.endsWith(':')) {
+    final inVolume = parent.contains(':') && !parent.endsWith(':');
+    final inFileTree = parent.startsWith('/') && parent.length > 1;
+    if (parent != id && (inVolume || inFileTree)) {
       _ensureDir(parent);
     }
     _nodes[id] = const _Node(isDir: true);

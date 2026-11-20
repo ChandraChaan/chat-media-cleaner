@@ -1,8 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <!-- All-files access, so the app can work as a file manager. Android 11 and
+         later grant it on a settings screen (MANAGE_EXTERNAL_STORAGE); Android 8
+         to 10 use the storage runtime permissions with legacy storage. Folders
+         picked through the system folder picker still need no permission. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
     <!-- The video player library asks for these for streaming and background
          playback. This app only plays files already on the phone, in the
-         foreground, so it keeps the promise of asking for no permissions. -->
+         foreground, so it doesn't need them. -->
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:node="remove" />
@@ -12,7 +25,8 @@
     <application
         android:label="Chat Media Cleaner"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,6 +49,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Serves files reached with all-files access, read only, to the video
+             player and to apps the user shares or opens a file with. -->
+        <provider
+            android:name=".storage.FilesProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

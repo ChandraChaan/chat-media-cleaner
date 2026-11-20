@@ -4,11 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../home/presentation/scan_controller.dart';
+import '../../media/domain/cancel_token.dart';
 import '../../media/domain/media_file.dart';
+import '../../media/domain/media_source.dart';
 import '../../media/domain/media_storage.dart';
+import '../../media/domain/media_type.dart';
+import '../../places/presentation/places_controller.dart';
+import '../../storage/domain/file_category.dart';
 import '../../trash/presentation/trash_controller.dart';
 import '../domain/browse_entry.dart';
+import '../domain/file_clipboard.dart';
 import '../domain/file_names.dart';
+import '../domain/file_search.dart';
 
 /// Counts changes made to folders from inside the app (a rename), so open
 /// listings load again.
@@ -59,20 +66,101 @@ final class BrowseGridController extends Notifier<bool> {
   void toggle() => state = !state;
 }
 
+/// Whether names starting with a dot are shown. Chat apps' folders always
+/// show them, because WhatsApp keeps statuses in `.Statuses`.
+final showHiddenProvider = NotifierProvider<ShowHiddenController, bool>(
+  ShowHiddenController.new,
+);
+
+final class ShowHiddenController extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
+
+/// Only files of this kind are listed; null lists everything.
+final typeFilterProvider =
+    NotifierProvider<TypeFilterController, FileCategory?>(
+      TypeFilterController.new,
+    );
+
+final class TypeFilterController extends Notifier<FileCategory?> {
+  @override
+  FileCategory? build() => null;
+
+  void set(FileCategory? category) => state = category;
+}
+
+/// Whether hidden names are shown in [source].
+bool showsHiddenIn(MediaSource source, {required bool showHidden}) =>
+    showHidden || source.app != ChatApp.other;
+
 typedef ShownListingRef = ({BrowseLocation location, String query});
 
 /// A folder's listing in the chosen order, limited to names that contain
-/// the search text.
+/// the search text and to the chosen kind of file.
 final shownListingProvider = Provider.autoDispose
     .family<AsyncValue<FolderListing>, ShownListingRef>((ref, shown) {
       final sort = ref.watch(browseSortProvider);
+      final category = ref.watch(typeFilterProvider);
+      final hidden = showsHiddenIn(
+        shown.location.source,
+        showHidden: ref.watch(showHiddenProvider),
+      );
       return ref
           .watch(folderListingProvider(shown.location))
           .whenData(
-            (listing) =>
-                BrowseOrder.apply(listing, sort: sort, query: shown.query),
+            (listing) => BrowseOrder.apply(
+              listing,
+              sort: sort,
+              query: shown.query,
+              category: category,
+              showHidden: hidden,
+            ),
           );
     });
+
+/// Files and folders whose name contains the search text, anywhere below
+/// a folder.
+final deepSearchProvider = FutureProvider.autoDispose
+    .family<List<MediaFile>, ShownListingRef>((ref, shown) async {
+      ref.watch(folderRevisionProvider);
+      final cancel = CancelToken();
+      ref.onDispose(cancel.cancel);
+      final category = ref.watch(typeFilterProvider);
+      final found = await FileSearch(ref.watch(mediaStorageProvider)).run(
+        shown.location,
+        shown.query,
+        showHidden: showsHiddenIn(
+          shown.location.source,
+          showHidden: ref.watch(showHiddenProvider),
+        ),
+        cancel: cancel,
+      );
+      if (category == null) return found;
+      return [
+        for (final f in found)
+          if (f.isFolder ||
+              FileCategories.of(f.name, mimeType: f.mimeType) == category)
+            f,
+      ];
+    });
+
+/// What the user chose to copy or move, until it is pasted.
+final clipboardProvider = NotifierProvider<ClipboardController, FileClipboard?>(
+  ClipboardController.new,
+);
+
+final class ClipboardController extends Notifier<FileClipboard?> {
+  @override
+  FileClipboard? build() => null;
+
+  void set(ClipboardMode mode, List<MediaFile> items) =>
+      state = items.isEmpty ? null : FileClipboard(mode: mode, items: items);
+
+  void clear() => state = null;
+}
 
 /// File count and size of every folder, from the last scan. Empty before a
 /// scan.
@@ -108,11 +196,193 @@ final class RenameFailed extends RenameResult {
 
 final fileOpsProvider = Provider<FileOps>(FileOps.new);
 
-/// Changes to single files that are not about the trash.
+/// Changes to files and folders that are not about the trash.
 final class FileOps {
   const FileOps(this._ref);
 
   final Ref _ref;
+
+  MediaStorage get _storage => _ref.read(mediaStorageProvider);
+
+  /// Makes a new folder in [location]. A [Renamed] result holds the new
+  /// folder.
+  Future<RenameResult> createFolder(
+    BrowseLocation location,
+    String input,
+  ) async {
+    final problem = FileNames.check(input);
+    if (problem != null) return RenameRejected(problem);
+    final name = FileNames.clean(input);
+    try {
+      final item = await _storage.createFolder(
+        location.source.treeUri,
+        parentId: location.dirId,
+        name: name,
+      );
+      _changed();
+      return Renamed(
+        BrowseFolder(
+          id: item.id,
+          name: item.name,
+          modified: _ref.read(clockProvider)().toUtc(),
+        ).asItem(location),
+      );
+    } on StorageException catch (e, stack) {
+      if (e.error == StorageError.nameTaken) return const RenameNameTaken();
+      developer.log('Creating a folder failed', error: e, stackTrace: stack);
+      return const RenameFailed();
+    }
+  }
+
+  /// Copies or moves the clipboard's items into [target], one at a time,
+  /// reporting progress. The clipboard is empty afterwards.
+  Future<BatchResult> paste(
+    FileClipboard clipboard,
+    BrowseLocation target, {
+    void Function(int done, int total)? onProgress,
+  }) async {
+    final done = <MediaFile>[];
+    var failed = 0;
+    final moved = <String>{};
+    for (final (i, item) in clipboard.items.indexed) {
+      try {
+        final StoredItem stored;
+        if (clipboard.mode == ClipboardMode.copy) {
+          stored = await _storage.copy(
+            item.sourceId,
+            id: item.id,
+            targetTreeUri: target.source.treeUri,
+            targetParentId: target.dirId,
+          );
+        } else {
+          stored = await _storage.move(
+            item.sourceId,
+            id: item.id,
+            parentId: item.parentId,
+            targetTreeUri: target.source.treeUri,
+            targetParentId: target.dirId,
+          );
+          moved.add(item.key);
+        }
+        final placed = _placed(item, stored, target);
+        done.add(placed);
+        if (clipboard.mode == ClipboardMode.move) {
+          await _ref
+              .read(placesControllerProvider.notifier)
+              .replace(item.key, placed);
+        }
+      } on StorageException catch (e, stack) {
+        developer.log('Paste failed', error: e, stackTrace: stack);
+        failed++;
+      }
+      onProgress?.call(i + 1, clipboard.count);
+    }
+    if (clipboard.mode == ClipboardMode.move) {
+      _ref.read(scanControllerProvider.notifier).removeFiles(moved);
+    }
+    _ref.read(clipboardProvider.notifier).clear();
+    _changed();
+    return BatchResult(done: done, failed: failed);
+  }
+
+  /// Packs [items] (all in [location]) into a ZIP archive there.
+  Future<RenameResult> compress(
+    BrowseLocation location,
+    List<MediaFile> items,
+    String input,
+  ) async {
+    var name = FileNames.clean(input);
+    if (!FileCategories.isZip(name)) name = '$name.zip';
+    final problem = FileNames.check(name);
+    if (problem != null) return RenameRejected(problem);
+    try {
+      final stored = await _storage.zip(
+        location.source.treeUri,
+        ids: [for (final item in items) item.id],
+        parentId: location.dirId,
+        name: name,
+      );
+      _changed();
+      return Renamed(_placed(null, stored, location, isFolder: false));
+    } on StorageException catch (e, stack) {
+      developer.log('Compressing failed', error: e, stackTrace: stack);
+      return const RenameFailed();
+    }
+  }
+
+  /// Unpacks the ZIP archive [file] into a new folder next to it. Returns
+  /// the folder, or null when the archive could not be read.
+  Future<MediaFile?> extract(MediaFile file) async {
+    try {
+      final stored = await _storage.unzip(
+        file.sourceId,
+        id: file.id,
+        parentId: file.parentId,
+      );
+      _changed();
+      final folder = file.folder;
+      return MediaFile(
+        id: stored.id,
+        sourceId: file.sourceId,
+        parentId: file.parentId,
+        name: stored.name,
+        relativePath: folder.isEmpty ? stored.name : '$folder/${stored.name}',
+        size: 0,
+        modified: _ref.read(clockProvider)().toUtc(),
+        type: MediaType.other,
+        mimeType: MediaFile.folderMimeType,
+      );
+    } on StorageException catch (e, stack) {
+      developer.log('Extracting failed', error: e, stackTrace: stack);
+      return null;
+    }
+  }
+
+  /// How much a folder holds, or null when it can't be measured.
+  Future<FolderSize?> measure(MediaFile folder) async {
+    try {
+      return await _storage.folderSize(folder.sourceId, folder.id);
+    } on StorageException catch (e, stack) {
+      developer.log('Measuring a folder failed', error: e, stackTrace: stack);
+      return null;
+    }
+  }
+
+  /// [items] with the size of each folder filled in, so the trash can say
+  /// how much space they take.
+  Future<List<MediaFile>> withFolderSizes(List<MediaFile> items) async => [
+    for (final item in items)
+      if (item.isFolder)
+        item.copyWith(size: (await measure(item))?.bytes ?? 0)
+      else
+        item,
+  ];
+
+  MediaFile _placed(
+    MediaFile? original,
+    StoredItem stored,
+    BrowseLocation target, {
+    bool? isFolder,
+  }) {
+    final path = target.isRoot
+        ? stored.name
+        : '${target.relativePath}/${stored.name}';
+    final folder = isFolder ?? original?.isFolder ?? false;
+    return MediaFile(
+      id: stored.id,
+      sourceId: target.source.id,
+      parentId: target.dirId,
+      name: stored.name,
+      relativePath: path,
+      size: original?.size ?? 0,
+      modified: original?.modified ?? _ref.read(clockProvider)().toUtc(),
+      type: original?.type ?? MediaType.other,
+      isSent: original?.isSent ?? false,
+      mimeType: folder ? MediaFile.folderMimeType : original?.mimeType,
+    );
+  }
+
+  void _changed() => _ref.read(folderRevisionProvider.notifier).bump();
 
   Future<RenameResult> rename(MediaFile file, String input) async {
     final problem = FileNames.check(input);
@@ -141,7 +411,10 @@ final class FileOps {
       relativePath: folder.isEmpty ? name : '$folder/$name',
     );
     _ref.read(scanControllerProvider.notifier).replaceFile(file.key, renamed);
-    _ref.read(folderRevisionProvider.notifier).bump();
+    await _ref
+        .read(placesControllerProvider.notifier)
+        .replace(file.key, renamed);
+    _changed();
     return Renamed(renamed);
   }
 

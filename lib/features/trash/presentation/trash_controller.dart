@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../access/presentation/storage_access_controller.dart';
 import '../../home/presentation/scan_controller.dart';
 import '../../media/domain/media_file.dart';
+import '../../places/presentation/places_controller.dart';
 import '../../settings/presentation/settings_controller.dart';
+import '../../storage/presentation/storage_scan_controller.dart';
 import '../domain/trash_entry.dart';
 import '../domain/trash_repository.dart';
 
@@ -29,13 +32,15 @@ final class TrashController extends AsyncNotifier<List<TrashEntry>> {
     List<MediaFile> files, {
     void Function(int done, int total)? onProgress,
   }) => _serial(() async {
-    final settings = await ref.read(settingsControllerProvider.future);
+    await ref.read(settingsControllerProvider.future);
+    await ref.read(storageVolumesProvider.future);
     final result = await _repo.moveToTrash(files, {
-      for (final s in settings.sources) s.id: s,
+      for (final s in ref.read(knownSourcesProvider)) s.id: s,
     }, onProgress: onProgress);
-    ref.read(scanControllerProvider.notifier).removeFiles({
-      for (final e in result.done) e.originalKey,
-    });
+    final moved = {for (final e in result.done) e.originalKey};
+    ref.read(scanControllerProvider.notifier).removeFiles(moved);
+    ref.read(storageScanControllerProvider.notifier).removeFiles(moved);
+    await ref.read(placesControllerProvider.notifier).forget(moved);
     await _refresh();
     return result;
   });

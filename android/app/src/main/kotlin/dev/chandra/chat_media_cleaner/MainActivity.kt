@@ -24,6 +24,15 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (storage?.onRequestPermissionsResult(requestCode) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
     override fun onDestroy() {
         storage?.dispose()
         storage = null

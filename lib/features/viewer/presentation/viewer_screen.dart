@@ -10,6 +10,7 @@ import '../../../core/l10n.dart';
 import '../../../core/theme.dart';
 import '../../media/domain/media_file.dart';
 import '../../media/domain/media_storage.dart';
+import '../../places/presentation/places_controller.dart';
 import '../../review/presentation/move_to_trash_flow.dart';
 import '../../review/presentation/review_controller.dart';
 import '../domain/view_kind.dart';
@@ -70,7 +71,12 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
   void initState() {
     super.initState();
     _screen = ref.read(screenControlProvider);
+    _remember(_files[_index]);
   }
+
+  /// Adds [file] to the recent files on the Files tab.
+  void _remember(MediaFile file) =>
+      unawaited(ref.read(placesControllerProvider.notifier).opened(file));
 
   @override
   void dispose() {
@@ -133,6 +139,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
     if (_fullscreen && _kindOf(_files[index]) != ViewKind.video) {
       _setFullscreen(false);
     }
+    _remember(_files[index]);
   }
 
   Future<void> _delete() async {

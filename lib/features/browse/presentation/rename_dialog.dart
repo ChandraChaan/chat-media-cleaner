@@ -3,27 +3,106 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n.dart';
 import '../../media/domain/media_file.dart';
+import '../domain/browse_entry.dart';
 import '../domain/file_names.dart';
 import 'browse_controller.dart';
 
-/// Asks for a new name for [file] and renames it. Returns the renamed
-/// file, or null when the user backed out.
-Future<MediaFile?> showRenameDialog(BuildContext context, MediaFile file) =>
-    showDialog<MediaFile>(
-      context: context,
-      builder: (_) => _RenameDialog(file: file),
-    );
-
-class _RenameDialog extends ConsumerStatefulWidget {
-  const _RenameDialog({required this.file});
-
-  final MediaFile file;
-
-  @override
-  ConsumerState<_RenameDialog> createState() => _RenameDialogState();
+/// Asks for a new name for [file] (a file or a folder) and renames it.
+/// Returns the renamed item, or null when the user backed out.
+Future<MediaFile?> showRenameDialog(BuildContext context, MediaFile file) {
+  final l10n = context.l10n;
+  return showDialog<MediaFile>(
+    context: context,
+    builder: (_) => _NameDialog(
+      title: l10n.renameTitle,
+      label: file.isFolder ? l10n.nameLabel : l10n.renameLabel,
+      initialName: file.name,
+      selectStem: !file.isFolder,
+      action: l10n.actionRename,
+      warning: l10n.renameWarning,
+      submit: (ref, name) => ref.read(fileOpsProvider).rename(file, name),
+    ),
+  );
 }
 
-class _RenameDialogState extends ConsumerState<_RenameDialog> {
+/// Asks for a name and makes a new folder in [location]. Returns it, or
+/// null when the user backed out.
+Future<MediaFile?> showNewFolderDialog(
+  BuildContext context,
+  BrowseLocation location,
+) {
+  final l10n = context.l10n;
+  return showDialog<MediaFile>(
+    context: context,
+    builder: (_) => _NameDialog(
+      title: l10n.newFolderTitle,
+      label: l10n.nameLabel,
+      initialName: l10n.newFolderDefaultName,
+      selectStem: false,
+      action: l10n.actionCreate,
+      submit: (ref, name) =>
+          ref.read(fileOpsProvider).createFolder(location, name),
+    ),
+  );
+}
+
+/// Asks for an archive name and packs [items] into it. Returns the
+/// archive, or null when the user backed out.
+Future<MediaFile?> showCompressDialog(
+  BuildContext context,
+  BrowseLocation location,
+  List<MediaFile> items,
+) {
+  final l10n = context.l10n;
+  final base = items.length == 1
+      ? items.single.name.substring(
+          0,
+          items.single.isFolder
+              ? items.single.name.length
+              : FileNames.stemLength(items.single.name),
+        )
+      : l10n.archiveDefaultName;
+  return showDialog<MediaFile>(
+    context: context,
+    builder: (_) => _NameDialog(
+      title: l10n.compressTitle(items.length),
+      label: l10n.nameLabel,
+      initialName: '$base.zip',
+      selectStem: true,
+      action: l10n.actionCompress,
+      submit: (ref, name) =>
+          ref.read(fileOpsProvider).compress(location, items, name),
+    ),
+  );
+}
+
+class _NameDialog extends ConsumerStatefulWidget {
+  const _NameDialog({
+    required this.title,
+    required this.label,
+    required this.initialName,
+    required this.selectStem,
+    required this.action,
+    required this.submit,
+    this.warning,
+  });
+
+  final String title;
+  final String label;
+  final String initialName;
+
+  /// Selects the name without its extension, ready to type over; otherwise
+  /// all of it.
+  final bool selectStem;
+  final String action;
+  final String? warning;
+  final Future<RenameResult> Function(WidgetRef ref, String name) submit;
+
+  @override
+  ConsumerState<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends ConsumerState<_NameDialog> {
   late final TextEditingController _name;
   String? _error;
   bool _busy = false;
@@ -31,12 +110,13 @@ class _RenameDialogState extends ConsumerState<_RenameDialog> {
   @override
   void initState() {
     super.initState();
-    final name = widget.file.name;
-    // The part before the extension is selected, ready to type over.
+    final name = widget.initialName;
     _name = TextEditingController(text: name)
       ..selection = TextSelection(
         baseOffset: 0,
-        extentOffset: FileNames.stemLength(name),
+        extentOffset: widget.selectStem
+            ? FileNames.stemLength(name)
+            : name.length,
       );
   }
 
@@ -49,9 +129,7 @@ class _RenameDialogState extends ConsumerState<_RenameDialog> {
   Future<void> _save() async {
     if (_busy) return;
     setState(() => _busy = true);
-    final result = await ref
-        .read(fileOpsProvider)
-        .rename(widget.file, _name.text);
+    final result = await widget.submit(ref, _name.text);
     if (!mounted) return;
     final l10n = context.l10n;
     switch (result) {
@@ -85,7 +163,7 @@ class _RenameDialogState extends ConsumerState<_RenameDialog> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Text(l10n.renameTitle),
+      title: Text(widget.title),
       scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -102,19 +180,21 @@ class _RenameDialogState extends ConsumerState<_RenameDialog> {
               if (_error != null) setState(() => _error = null);
             },
             decoration: InputDecoration(
-              labelText: l10n.renameLabel,
+              labelText: widget.label,
               errorText: _error,
               errorMaxLines: 3,
               border: const OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.renameWarning,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          if (widget.warning case final warning?) ...[
+            const SizedBox(height: 12),
+            Text(
+              warning,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
+          ],
         ],
       ),
       actions: [
@@ -125,7 +205,7 @@ class _RenameDialogState extends ConsumerState<_RenameDialog> {
         FilledButton(
           key: const Key('rename-save'),
           onPressed: _busy ? null : _save,
-          child: Text(l10n.actionRename),
+          child: Text(widget.action),
         ),
       ],
     );
